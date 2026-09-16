@@ -5,7 +5,6 @@ const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { Server } = require('socket.io');
 
@@ -21,19 +20,20 @@ const incidentRoutes = require('./routes/incidents');
 const auditRoutes = require('./routes/audit');
 const eventRoutes = require('./routes/events');
 const malwareRoutes = require('./routes/malware');
+const deviceRoutes = require('./routes/devices');
+const responseActionRoutes = require('./routes/responseActions');
 const { startRealtimeEngine } = require('./utils/realtimeEngine');
+const { structuredLogger } = require('./utils/structuredLogger');
+const metricsCollector = require('./utils/metricsCollector');
+
+const config = require('./config');
 
 const app = express();
 
-const allowedOrigins = process.env.CORS_ORIGIN 
-  ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) 
-  : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'];
-
 const isAllowedOrigin = (origin) => {
   if (!origin) return true; // Allow non-browser agents, CLI tools, server-to-server
-  if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) return true;
-  // Always allow live deployment domains (Render and Vercel) as well as local development
-  if (origin.endsWith('.vercel.app') || origin.endsWith('.onrender.com') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+  if (config.server.corsOrigins.includes(origin) || config.server.corsOrigins.includes('*')) return true;
+  if (!config.isProduction && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return true;
   }
   return false;
@@ -48,33 +48,40 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-Device-Id', 'X-Device-Token', 'X-Timestamp', 'X-Nonce', 'X-Signature', 'X-Body-Hash', 'X-Request-ID', 'X-Idempotency-Key'],
 };
 
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-
 const { getJwtSecret } = require('./config/jwt');
-// Strictly validates JWT_SECRET (throws in production if missing)
-getJwtSecret();
 
 app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
-app.use(morgan('dev'));
 
-// Assign unique X-Request-ID header to every inbound request for distributed audit tracing
+// Assign unique X-Request-ID header to every inbound request
 app.use((req, res, next) => {
-  req.id = req.headers['x-request-id'] || crypto.randomUUID();
+  req.id = req.headers['x-request-id'] || `req-${crypto.randomUUID()}`;
   res.setHeader('X-Request-ID', req.id);
   next();
 });
 
-// Body-parse error handler: express.json() strict mode rejects bare primitives.
-// Without this handler, parse errors fall through to the generic 500 error handler.
+// Metrics & Structured JSON Logger hooks
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    metricsCollector.recordRequest(req.method, req.path, res.statusCode, duration);
+  });
+  next();
+});
+
+app.use(structuredLogger({ service: 'cyber-sentinel-api' }));
+
+// Strict JSON parse error handler
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError || err.type === 'entity.parse.failed' || err.status === 400 || err.statusCode === 400) {
     return res.status(400).json({ error: 'Invalid request body: must be a valid JSON object.' });
@@ -87,13 +94,14 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') ? 1000 : 50,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  handler: (req, res) => res.status(429).json({ error: 'Too many authentication attempts. Please try again later.' }),
 });
 app.use('/api/auth', authLimiter, authRoutes);
 
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
-  max: 60, // bumped up since real-time frontend polls some endpoints too
+  max: (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') ? 10000 : 120,
   message: { error: 'Too many requests. Please try again in a minute.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -110,8 +118,11 @@ app.use('/api/incidents', apiLimiter, incidentRoutes);
 app.use('/api/audit-logs', apiLimiter, auditRoutes);
 app.use('/api/events', apiLimiter, eventRoutes);
 app.use('/api/malware', apiLimiter, malwareRoutes);
+app.use('/api/devices', apiLimiter, deviceRoutes);
+app.use('/api/response-actions', apiLimiter, responseActionRoutes);
 
-app.get('/api/health', (req, res) => {
+// Observability: Health Check (Liveness)
+const healthHandler = (req, res) => {
   const host = req.get('host');
   const protocol = req.headers['x-forwarded-proto'] === 'https' || req.protocol === 'https' ? 'https' : 'http';
   const websocketUrl = process.env.RENDER_EXTERNAL_URL || `${protocol}://${host}`;
@@ -119,6 +130,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    service: 'cyber-sentinel-api',
+    uptime: Number(process.uptime().toFixed(2)),
     websocket: 'enabled',
     websocketUrl,
     components: {
@@ -128,47 +141,15 @@ app.get('/api/health', (req, res) => {
       correlationEngine: 'active',
       realtimeEngine: 'active',
     },
-    uptime: process.uptime(),
   });
-});
+};
 
-app.get('/api/metrics', (req, res) => {
-  const mem = process.memoryUsage();
-  const store = require('./data/securityStore');
-  const incidentCount = (store.getIncidents ? store.getIncidents() : []).length;
-  const blockedIpCount = Object.keys(store.getBlockedIps ? store.getBlockedIps() : {}).length;
-  const wsActive = io.engine ? io.engine.clientsCount : 0;
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+app.get('/api/health/live', (req, res) => res.json({ status: 'ok', uptime: process.uptime() }));
 
-  const metrics = [
-    '# HELP cs_uptime_seconds Total process uptime in seconds',
-    '# TYPE cs_uptime_seconds gauge',
-    `cs_uptime_seconds ${process.uptime().toFixed(2)}`,
-    '# HELP cs_memory_heap_used_bytes V8 heap memory used in bytes',
-    '# TYPE cs_memory_heap_used_bytes gauge',
-    `cs_memory_heap_used_bytes ${mem.heapUsed}`,
-    '# HELP cs_memory_heap_total_bytes V8 heap total memory in bytes',
-    '# TYPE cs_memory_heap_total_bytes gauge',
-    `cs_memory_heap_total_bytes ${mem.heapTotal}`,
-    '# HELP cs_ws_connections_active Number of active WebSocket client connections',
-    '# TYPE cs_ws_connections_active gauge',
-    `cs_ws_connections_active ${wsActive}`,
-    '# HELP cs_incidents_total Total number of security incidents recorded',
-    '# TYPE cs_incidents_total counter',
-    `cs_incidents_total ${incidentCount}`,
-    '# HELP cs_firewall_blocked_ips_active Number of actively contained IP addresses',
-    '# TYPE cs_firewall_blocked_ips_active gauge',
-    `cs_firewall_blocked_ips_active ${blockedIpCount}`,
-  ].join('\n');
-
-  res.setHeader('Content-Type', 'text/plain; version=0.0.4');
-  res.send(metrics);
-});
-
-app.get('/api/health/live', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime() });
-});
-
-app.get('/api/health/ready', async (req, res) => {
+// Observability: Ready Check (Readiness)
+const readyHandler = async (req, res) => {
   try {
     const { isPostgresConnected, getPool } = require('./data/db');
     let dbStatus = 'offline_file_mode';
@@ -180,46 +161,92 @@ app.get('/api/health/ready', async (req, res) => {
     return res.json({
       status: 'ready',
       database: dbStatus,
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString()
+      uptime: Number(process.uptime().toFixed(2)),
+      timestamp: new Date().toISOString(),
     });
   } catch (err) {
+    metricsCollector.incDatabaseError();
     return res.status(503).json({
       status: 'degraded',
-      error: err.message,
-      timestamp: new Date().toISOString()
+      error: 'Database connection failed',
+      timestamp: new Date().toISOString(),
     });
   }
-});
+};
 
+app.get('/ready', readyHandler);
+app.get('/api/ready', readyHandler);
+app.get('/api/health/ready', readyHandler);
+
+// Observability: Protected Prometheus & JSON Metrics Endpoint
+const metricsHandler = (req, res) => {
+  // Authorization check: Require METRICS_TOKEN or Bearer auth token with permissions
+  const metricsToken = process.env.METRICS_TOKEN || config.telemetry?.metricsToken;
+  if (metricsToken) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    if (token !== metricsToken) {
+      // Check if valid JWT with metrics read role
+      try {
+        const decoded = jwt.verify(token, getJwtSecret());
+        if (decoded.role !== 'ADMIN' && decoded.role !== 'AUDITOR' && decoded.role !== 'SUPERADMIN') {
+          return res.status(403).json({ error: 'Forbidden: Insufficient privileges to view telemetry metrics.' });
+        }
+      } catch (_) {
+        return res.status(401).json({ error: 'Unauthorized: Valid METRICS_TOKEN or Admin Bearer token required.' });
+      }
+    }
+  }
+
+  // Support format=json query
+  if (req.query.format === 'json') {
+    return res.json(metricsCollector.getJsonSnapshot());
+  }
+
+  res.setHeader('Content-Type', 'text/plain; version=0.0.4');
+  res.send(metricsCollector.getPrometheusFormat());
+};
+
+app.get('/metrics', metricsHandler);
+app.get('/api/metrics', metricsHandler);
+
+// Serve static frontend if available
 const candidateDistPaths = [
   path.resolve(__dirname, '../../frontend/dist'),
   path.resolve(__dirname, '../../dist'),
   path.resolve(__dirname, '../dist'),
   path.resolve(process.cwd(), 'frontend/dist'),
-  path.resolve(process.cwd(), 'dist')
+  path.resolve(process.cwd(), 'dist'),
 ];
 const frontendDistPath = candidateDistPaths.find(p => fs.existsSync(p)) || candidateDistPaths[0];
 if (fs.existsSync(frontendDistPath)) {
-  console.log(`[Server] Serving static frontend from: ${frontendDistPath}`);
   app.use(express.static(frontendDistPath));
   app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
-      return res.status(404).json({ error: 'Not found' });
+      return res.status(404).json({ error: 'API endpoint not found.' });
     }
     res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
 } else {
-  console.log(`[Server] Static frontend folder not found at: ${frontendDistPath}. API-only mode enabled.`);
-  app.use((req, res) => res.status(404).json({ error: 'Not found' }));
+  app.use((req, res) => res.status(404).json({ error: 'Resource not found.' }));
 }
 
+// Global safe error handling: NEVER leak stack traces or internal DB details
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ error: 'Internal server error' });
+  const status = err.status || err.statusCode || 500;
+  const requestId = req.id || 'unknown';
+
+  // Log internal error safely on server side
+  console.error(`[UnhandledError][${requestId}]`, err.message);
+
+  // Return clean, non-leaking error response to clients
+  res.status(status).json({
+    error: status >= 500 ? 'Internal server error. The incident has been recorded.' : err.message,
+    requestId,
+  });
 });
 
-// ── Attach Socket.IO to an HTTP server ──
+// Socket.IO HTTP server setup
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: corsOptions,
@@ -227,7 +254,7 @@ const io = new Server(server, {
 });
 app.set('io', io);
 
-// Socket.IO authentication middleware: JWT is mandatory — no guest connections allowed
+// Socket.IO JWT authentication
 io.use((socket, next) => {
   const rawToken = socket.handshake.auth?.token || socket.handshake.query?.token;
   if (!rawToken) {
@@ -237,14 +264,11 @@ io.use((socket, next) => {
   try {
     const decoded = jwt.verify(cleanToken, getJwtSecret());
     socket.user = decoded;
-    // Join role-based room immediately on authentication so RBAC-filtered emits work
     const userRole = (decoded.role || 'ANALYST').toUpperCase();
     socket.join(`role:${userRole}`);
-    // All authenticated users receive the shared broadcast room
     socket.join('authenticated');
     return next();
   } catch (err) {
-    console.warn(`[RT] Socket rejected — invalid token: ${err.message}`);
     return next(new Error(`WS_AUTH_INVALID: ${err.message}`));
   }
 });
@@ -254,19 +278,17 @@ const startServer = () => {
   return server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🛡  Cyber Sentinel API running on port ${PORT}`);
     console.log(`⚡  WebSocket real-time engine: ACTIVE`);
-    console.log(`📡  Emitting: system:metrics (2s) · attack:event (3-7s) · timeline:update (30s)\n`);
+    console.log(`📡  Endpoints: /health · /ready · /metrics · /api/incidents · /api/response-actions\n`);
   });
 };
 
 const gracefulShutdown = (signal) => {
   console.log(`\n[Server] Received ${signal}. Shutting down gracefully...`);
   server.close(() => {
-    console.log('[Server] HTTP and Socket.IO server closed.');
     const { getPool, closeDb } = require('./data/db');
     const dbPool = getPool();
     if (dbPool) {
       closeDb().then(() => {
-        console.log('[Server] PostgreSQL pool closed.');
         process.exit(0);
       }).catch(() => process.exit(0));
     } else {
@@ -274,7 +296,6 @@ const gracefulShutdown = (signal) => {
     }
   });
   setTimeout(() => {
-    console.error('[Server] Forced shutdown after timeout.');
     process.exit(1);
   }, 5000).unref();
 };
@@ -284,7 +305,6 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 if (require.main === module) {
   startRealtimeEngine(io);
-  // Give the chatbot route a reference to Socket.IO for streaming agent steps
   chatbotRoutes.setIO(io);
   startServer();
 }

@@ -1,12 +1,14 @@
-version: '3.8'
-
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      target: runner
+    image: cyber-sentinel-backend:latest
     container_name: cyber-sentinel-backend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "5000:5000"
     environment:
@@ -14,21 +16,48 @@ services:
       - NODE_ENV=production
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-15m}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost,http://localhost:80,http://localhost:5173}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:8080,http://localhost:80,http://localhost:5173}
       - DATABASE_URL=${DATABASE_URL:-}
+      - METRICS_TOKEN=${METRICS_TOKEN:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     volumes:
       - sentinel-data:/app/src/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health', (r) => {if (r.statusCode !== 200) process.exit(1)}).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - sentinel-net
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: runner
+    image: cyber-sentinel-frontend:latest
     container_name: cyber-sentinel-frontend
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "80:80"
+      - "8080:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    networks:
+      - sentinel-net
 
 volumes:
   sentinel-data:
+    driver: local
+
+networks:
+  sentinel-net:
+    driver: bridge

@@ -16,7 +16,10 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-router.get('/dashboard', (req, res) => {
+let cachedSysMetrics = null;
+let lastMetricsCollection = 0;
+
+router.get('/dashboard', async (req, res) => {
   const liveAttacks = generateRealLiveAttacks(15);
   const blockedCount = liveAttacks.filter((a) => a.blocked).length;
   const criticalCount = liveAttacks.filter((a) => a.severity === 'CRITICAL').length;
@@ -32,10 +35,17 @@ router.get('/dashboard', (req, res) => {
   let sysMetrics = null;
 
   try {
-    sysMetrics = collectSystemMetrics();
-    setLastSystemMetrics(sysMetrics);
-    threatScore = sysMetrics.threatScore;
-    systemFindings = sysMetrics.findings;
+    const now = Date.now();
+    if (cachedSysMetrics && (now - lastMetricsCollection < 2000)) {
+      sysMetrics = cachedSysMetrics;
+    } else {
+      sysMetrics = await collectSystemMetrics();
+      cachedSysMetrics = sysMetrics;
+      lastMetricsCollection = now;
+      setLastSystemMetrics(sysMetrics);
+    }
+    threatScore = sysMetrics?.threatScore ?? 0;
+    systemFindings = sysMetrics?.findings ?? [];
   } catch (e) {
     const lastScan = getLastScanResult();
     if (lastScan) {

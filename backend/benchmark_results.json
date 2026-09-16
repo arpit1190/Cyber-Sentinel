@@ -1,0 +1,350 @@
+{
+  "testEnvironment": {
+    "platform": "win32",
+    "arch": "x64",
+    "nodeVersion": "v24.18.0",
+    "cpuCount": 16,
+    "cpuModel": "12th Gen Intel(R) Core(TM) i5-12500H",
+    "totalMemoryMB": 16052,
+    "freeMemoryMB": 3123,
+    "timestamp": "2026-09-16T03:34:50.511Z"
+  },
+  "benchmarks": {
+    "authCrypto": {
+      "bcryptHash": {
+        "mean": 126.58726999999999,
+        "p50": 123.1182,
+        "p95": 171.8084,
+        "p99": 171.8084,
+        "min": 102.2784,
+        "max": 171.8084,
+        "totalCount": 10
+      },
+      "bcryptVerify": {
+        "mean": 118.01670000000001,
+        "p50": 110.1203,
+        "p95": 170.25,
+        "p99": 170.25,
+        "min": 97.6893,
+        "max": 170.25,
+        "totalCount": 20
+      },
+      "jwtSign": {
+        "mean": 0.06459730000000002,
+        "p50": 0.0481,
+        "p95": 0.1158,
+        "p99": 0.3138,
+        "min": 0.04,
+        "max": 2.5028,
+        "totalCount": 1000
+      },
+      "jwtVerify": {
+        "mean": 0.06693340000000002,
+        "p50": 0.0521,
+        "p95": 0.1046,
+        "p99": 0.4334,
+        "min": 0.0472,
+        "max": 1.5508,
+        "totalCount": 1000
+      },
+      "hmacSign": {
+        "mean": 0.009995339999999941,
+        "p50": 0.0062,
+        "p95": 0.0176,
+        "p99": 0.0448,
+        "min": 0.0054,
+        "max": 3.305,
+        "totalCount": 5000
+      }
+    },
+    "apiLatency": {
+      "GET /api/health (Liveness)": {
+        "mean": 0.7327485000000002,
+        "p50": 0.5786,
+        "p95": 1.1634,
+        "p99": 3.1413,
+        "min": 0.4021,
+        "max": 16.8233,
+        "totalCount": 200
+      },
+      "GET /api/ready (Readiness)": {
+        "mean": 0.49833250000000023,
+        "p50": 0.4115,
+        "p95": 1.0523,
+        "p99": 1.7754,
+        "min": 0.3215,
+        "max": 3.6886,
+        "totalCount": 200
+      },
+      "GET /api/auth/me (Protected User Identity)": {
+        "mean": 0.9446075,
+        "p50": 0.7672,
+        "p95": 1.9108,
+        "p99": 4.5326,
+        "min": 0.4859,
+        "max": 5.0345,
+        "totalCount": 200
+      },
+      "GET /api/threats/dashboard (SOC Overview)": {
+        "mean": 48.260268,
+        "p50": 0.7318,
+        "p95": 1.5823,
+        "p99": 4394.6242,
+        "min": 0.6279,
+        "max": 4394.6242,
+        "totalCount": 100
+      },
+      "GET /api/threats/blocked (Containment Rules)": {
+        "mean": 0.613973,
+        "p50": 0.5614,
+        "p95": 0.8661,
+        "p99": 1.3788,
+        "min": 0.4835,
+        "max": 1.6425,
+        "totalCount": 200
+      },
+      "GET /api/threats/cves (CVE Threat Intel Feed)": {
+        "mean": 0.6120644999999997,
+        "p50": 0.5529,
+        "p95": 0.9348,
+        "p99": 1.6244,
+        "min": 0.449,
+        "max": 1.6434,
+        "totalCount": 200
+      },
+      "GET /api/incidents (Filtered Incident Query)": {
+        "mean": 1.182258,
+        "p50": 1.0008,
+        "p95": 2.012,
+        "p99": 4.2809,
+        "min": 0.8427,
+        "max": 4.3466,
+        "totalCount": 200
+      },
+      "GET /api/devices (Enrolled Device Catalog)": {
+        "mean": 0.626669,
+        "p50": 0.5134,
+        "p95": 1.1027,
+        "p99": 1.9743,
+        "min": 0.4343,
+        "max": 7.5992,
+        "totalCount": 200
+      },
+      "GET /api/audit-logs (Audit Trail)": {
+        "mean": 1.0234570000000005,
+        "p50": 0.9002,
+        "p95": 1.9547,
+        "p99": 2.1316,
+        "min": 0.5813,
+        "max": 2.9272,
+        "totalCount": 200
+      }
+    },
+    "telemetryNormalization": {
+      "events_1000": {
+        "count": 1000,
+        "totalDurationMs": 19.7186,
+        "throughputEventsPerSec": 50714,
+        "stats": {
+          "mean": 0.018921800000000006,
+          "p50": 0.0146,
+          "p95": 0.022,
+          "p99": 0.0561,
+          "min": 0.0093,
+          "max": 3.0916,
+          "totalCount": 1000
+        }
+      },
+      "events_10000": {
+        "count": 10000,
+        "totalDurationMs": 140.8786,
+        "throughputEventsPerSec": 70983,
+        "stats": {
+          "mean": 0.01340352999999999,
+          "p50": 0.0108,
+          "p95": 0.0189,
+          "p99": 0.0412,
+          "min": 0.0074,
+          "max": 0.9072,
+          "totalCount": 10000
+        }
+      },
+      "events_50000": {
+        "count": 50000,
+        "totalDurationMs": 512.4057,
+        "throughputEventsPerSec": 97579,
+        "stats": {
+          "mean": 0.009743417999999508,
+          "p50": 0.0083,
+          "p95": 0.0155,
+          "p99": 0.0271,
+          "min": 0.0072,
+          "max": 0.5454,
+          "totalCount": 50000
+        }
+      },
+      "httpIngestionApi": {
+        "mean": 0.6253840000000003,
+        "p50": 0.4891,
+        "p95": 0.9097,
+        "p99": 1.5357,
+        "min": 0.3701,
+        "max": 15.8048,
+        "totalCount": 200
+      }
+    },
+    "detectionEngine": {
+      "modularEngine": {
+        "eventCount": 5000,
+        "throughputEventsPerSec": 49313,
+        "stats": {
+          "mean": 0.009151299999999966,
+          "p50": 0.0052,
+          "p95": 0.0158,
+          "p99": 0.0453,
+          "min": 0.0027,
+          "max": 4.2349,
+          "totalCount": 5000
+        }
+      },
+      "correlationEngine": {
+        "eventCount": 5000,
+        "stats": {
+          "mean": 0.0025147199999999903,
+          "p50": 0.0002,
+          "p95": 0.0141,
+          "p99": 0.0175,
+          "min": 0.0001,
+          "max": 0.56,
+          "totalCount": 5000
+        }
+      },
+      "threatIntel": {
+        "lookupCount": 20000,
+        "throughputLookupsPerSec": 1342066,
+        "stats": {
+          "mean": 0.0005774550000001782,
+          "p50": 0.0006,
+          "p95": 0.0007,
+          "p99": 0.0008,
+          "min": 0.0003,
+          "max": 0.1841,
+          "totalCount": 20000
+        }
+      }
+    },
+    "incidentManagement": {
+      "creation": {
+        "mean": 0.02908419999999994,
+        "p50": 0.0186,
+        "p95": 0.0398,
+        "p99": 0.104,
+        "min": 0.0154,
+        "max": 2.1808,
+        "totalCount": 500
+      },
+      "timelineNoteAppend": {
+        "mean": 0.028096400000000004,
+        "p50": 0.017,
+        "p95": 0.0567,
+        "p99": 0.2926,
+        "min": 0.0134,
+        "max": 1.0793,
+        "totalCount": 500
+      },
+      "filteredSearchQuery": {
+        "mean": 0.038214499999999985,
+        "p50": 0.0321,
+        "p95": 0.0638,
+        "p99": 0.1475,
+        "min": 0.0303,
+        "max": 0.362,
+        "totalCount": 1000
+      },
+      "timelineIntegrityVerify": {
+        "mean": 0.011448799999999983,
+        "p50": 0.0092,
+        "p95": 0.0158,
+        "p99": 0.0386,
+        "min": 0.0074,
+        "max": 0.2842,
+        "totalCount": 500
+      }
+    },
+    "malwareAnalysis": {
+      "Small Binary (64 KB)": {
+        "mean": 2.3856100000000002,
+        "p50": 2.1866,
+        "p95": 3.2754,
+        "p99": 8.8142,
+        "min": 1.5442,
+        "max": 8.8142,
+        "totalCount": 50
+      },
+      "Medium Binary (1 MB)": {
+        "mean": 11.953632000000002,
+        "p50": 10.3249,
+        "p95": 17.6812,
+        "p99": 18.2729,
+        "min": 9.1757,
+        "max": 18.2729,
+        "totalCount": 50
+      },
+      "Large Binary (8 MB)": {
+        "mean": 63.73595,
+        "p50": 60.8454,
+        "p95": 96.4401,
+        "p99": 96.4401,
+        "min": 57.3094,
+        "max": 96.4401,
+        "totalCount": 10
+      }
+    },
+    "databaseQueries": {
+      "userLookupByEmail": {
+        "mean": 0.0010738999999999929,
+        "p50": 0.0006,
+        "p95": 0.0012,
+        "p99": 0.0031,
+        "min": 0.0004,
+        "max": 0.1089,
+        "totalCount": 1000
+      },
+      "deviceLookupById": {
+        "mean": 0.002256599999999984,
+        "p50": 0.0021,
+        "p95": 0.0029,
+        "p99": 0.0038,
+        "min": 0.0014,
+        "max": 0.025,
+        "totalCount": 1000
+      },
+      "firewallLookup": {
+        "mean": 0.0008310999999999934,
+        "p50": 0.0006,
+        "p95": 0.0011,
+        "p99": 0.0031,
+        "min": 0.0004,
+        "max": 0.0657,
+        "totalCount": 1000
+      },
+      "dashboardAggregation": {
+        "mean": 0.022946799999999986,
+        "p50": 0.0174,
+        "p95": 0.0331,
+        "p99": 0.0701,
+        "min": 0.0158,
+        "max": 0.5214,
+        "totalCount": 1000
+      }
+    },
+    "memoryProfiling": {
+      "initialHeapUsedMB": "43.45",
+      "peakHeapUsedMB": "48.33",
+      "postGcHeapUsedMB": "48.33",
+      "heapDeltaMB": "4.88",
+      "postGcDeltaMB": "4.88",
+      "rssMB": "172.21"
+    }
+  }
+}

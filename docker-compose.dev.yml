@@ -1,0 +1,52 @@
+# ==============================================================================
+# Cyber Sentinel — Local Development Docker Compose Configuration
+# Usage: docker compose -f docker-compose.dev.yml up --build
+# ==============================================================================
+
+services:
+  backend-dev:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cyber-sentinel-backend-dev
+    restart: "no"
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=development
+      - JWT_SECRET=dev-secret-sentinel-key-change-in-production-only-32bytes
+      - JWT_EXPIRES_IN=2h
+      - CORS_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
+      - DATABASE_URL=
+      - METRICS_TOKEN=dev-metrics-token
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev"]
+    networks:
+      - sentinel-dev-net
+
+  frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: cyber-sentinel-frontend-dev
+    restart: "no"
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    depends_on:
+      - backend-dev
+    networks:
+      - sentinel-dev-net
+
+networks:
+  sentinel-dev-net:
+    driver: bridge

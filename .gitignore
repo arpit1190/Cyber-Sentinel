@@ -1,12 +1,52 @@
+# Dependencies
 node_modules/
+package-lock.json.bak
+yarn.lock.bak
+
+# Build Artifacts
 dist/
+build/
+.cache/
+
+# Environment Configuration & Secrets
 .env
-.env.local
-*.log
-.DS_Store
-agent/.device_id
-*.tmp.*
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+*.pem
+*.key
+*.cert
+*.crt
+
+# Runtime Data Stores & Hardware Identities
 backend/src/data/security_state.json
 backend/src/data/users.json
+agent/.device_id
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Operating System & IDE Artifacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test Coverage & Diagnostics
 coverage/
 .nyc_output/
+*.tmp.*

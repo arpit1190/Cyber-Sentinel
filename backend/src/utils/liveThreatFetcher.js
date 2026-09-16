@@ -342,13 +342,18 @@ function getLiveCves() {
   ];
 }
 
-// Initial fetch immediately on startup
-syncLiveThreats().catch(e => console.error('[ThreatIntel] Initial sync error:', e.message));
+// Initial fetch immediately on startup (guarded for test/benchmark environments)
+if (process.env.NODE_ENV !== 'test' && process.env.CYBER_SENTINEL_BENCHMARK !== 'true') {
+  syncLiveThreats().catch(e => console.error('[ThreatIntel] Initial sync error:', e.message));
+}
 
-// Periodically refresh authentic threat feeds every 15 minutes
-setInterval(() => {
-  syncLiveThreats().catch(e => console.error('[ThreatIntel] Periodic sync error:', e.message));
+// Periodically refresh authentic threat feeds every 15 minutes (unref to allow clean exit)
+const syncTimer = setInterval(() => {
+  if (process.env.NODE_ENV !== 'test' && process.env.CYBER_SENTINEL_BENCHMARK !== 'true') {
+    syncLiveThreats().catch(e => console.error('[ThreatIntel] Periodic sync error:', e.message));
+  }
 }, 15 * 60 * 1000);
+if (syncTimer && syncTimer.unref) syncTimer.unref();
 
 module.exports = {
   syncLiveThreats,

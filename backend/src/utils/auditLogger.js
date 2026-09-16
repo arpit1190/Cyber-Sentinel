@@ -4,6 +4,7 @@
  * into the persistent SecurityStore with actor, action, target, result, IP, and details.
  */
 const { addAuditLog, getAuditLogs } = require('../data/securityStore');
+const { sanitizeAuditDetails } = require('./privacyMinimizer');
 
 const AuditActions = {
   LOGIN: 'LOGIN',
@@ -36,7 +37,7 @@ function logSecurityEvent({ actor, actorRole, action, target, result = 'SUCCESS'
     target: String(target || 'SYSTEM'),
     result,
     sourceIp: cleanIp,
-    details,
+    details: sanitizeAuditDetails(details),
   });
 }
 

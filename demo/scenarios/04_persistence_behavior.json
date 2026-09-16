@@ -1,0 +1,35 @@
+{
+  "scenario_id": "SCENARIO_04_PERSISTENCE_BEHAVIOR",
+  "title": "Unauthorized Persistence via Windows Registry Run Key",
+  "description": "Adversary establishes persistent startup survival by writing a registry run key pointing to a dropped script.",
+  "is_simulation": true,
+  "mitre_technique": "T1547.001",
+  "target_device": "DEV-DEMO-WORKSTATION-01",
+  "events": [
+    {
+      "event_id": "sim-persist-0001",
+      "timestamp": "2026-09-16T09:15:00.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "PERSISTENCE",
+      "severity": "HIGH",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "process": {
+        "name": "reg.exe",
+        "pid": 7208,
+        "ppid": 5824,
+        "path": "C:\\Windows\\System32\\reg.exe",
+        "command_line": "reg.exe add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v SecurityHealthService /t REG_SZ /d \"C:\\Users\\victim_user\\AppData\\Local\\Temp\\updater.vbs\" /f"
+      },
+      "details": {
+        "registryKey": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        "valueName": "SecurityHealthService",
+        "targetPayload": "C:\\Users\\victim_user\\AppData\\Local\\Temp\\updater.vbs"
+      }
+    }
+  ],
+  "expected_detection_rule": "RULE_REGISTRY_PERSISTENCE_011",
+  "expected_mitre_technique": "T1547.001 - Boot or Logon Autostart Execution: Registry Run Keys",
+  "recommended_response": "QUARANTINE_FILE (C:\\Users\\victim_user\\AppData\\Local\\Temp\\updater.vbs)"
+}

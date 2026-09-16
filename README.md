@@ -1,226 +1,569 @@
-# 🛡️ Cyber Sentinel — Intelligent Threat Monitoring & Active Defense Platform
+# 🛡️ Cyber Sentinel — Autonomous Incident Response & Threat Monitoring Platform
 
-[![Capstone Ready](https://img.shields.io/badge/Capstone-Defense%20Ready-00d4ff?style=for-the-badge&logo=shield)](https://github.com/yushdhiman/Cyber-Sentinel-)
-[![React 18](https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite-61dafb?style=for-the-badge&logo=react)](https://react.dev/)
-[![Node.js](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
-[![WebSocket](https://img.shields.io/badge/Real--Time-Socket.IO-010101?style=for-the-badge&logo=socket.io)](https://socket.io/)
-[![Threat Feeds](https://img.shields.io/badge/Threat%20Intel-ThreatFox%20%26%20CISA%20KEV-ff3b5c?style=for-the-badge&logo=securityscorecard)](https://threatfox.abuse.ch/)
-[![License](https://img.shields.io/badge/License-MIT-a855f7?style=for-the-badge)](LICENSE)
+[![Automated Tests](https://img.shields.io/badge/Test%20Suite-126%20Passed%20%7C%20100%25-brightgreen?style=for-the-badge&logo=jest)](tests/run_all_tests.js)
+[![Node.js](https://img.shields.io/badge/Runtime-Node.js%20v20%2B-339933?style=for-the-badge&logo=node.js)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/Frontend-React%2018%20%7C%20Vite-61dafb?style=for-the-badge&logo=react)](https://react.dev/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%2016-4169e1?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+[![MITRE ATT&CK](https://img.shields.io/badge/Framework-MITRE%20ATT%26CK%20v14-ff6f00?style=for-the-badge&logo=target)](https://attack.mitre.org/)
+[![License](https://img.shields.io/badge/License-MIT-purple?style=for-the-badge)](LICENSE)
 
-> **Enterprise-Grade Cybersecurity Operations Center (SOC) & Threat Intelligence Dashboard** featuring high-precision polar radar threat tracking, authentic threat feed ingestion (ThreatFox & CISA KEV), real-time host socket monitoring, heuristic SIEM log analysis, sandboxed malware inspection, and automated firewall mitigation.
-
----
-
-## 🚀 Live Deployments
-
-- 🌐 **Production Web Application (Vercel):** [https://cyber-sentinel-pwvj.vercel.app/](https://cyber-sentinel-pwvj.vercel.app/)
-- ⚡ **Production API & Real-Time Engine (Render):** [https://cyber-sentinel-1cdn.onrender.com/](https://cyber-sentinel-1cdn.onrender.com/)
+> **Cyber Sentinel** is a modular Security Operations Center (SOC) platform and SIEM correlation engine. It ingests heterogeneous endpoint telemetry, performs real-time detection rule evaluation mapped to the MITRE ATT&CK framework, manages incident lifecycles with cryptographically verifiable SHA-256 timeline hash chains, conducts static malware analysis, and integrates an AI security copilot bounded by human-in-the-loop authorization gates.
 
 ---
 
-## 📋 Executive Abstract & Capstone Motivation
+## 📑 Table of Contents
 
-In modern Security Operations Centers (SOCs), analysts face overwhelming alert fatigue, fragmented monitoring utilities, and high mean-time-to-detect (MTTD). **Cyber Sentinel** was engineered as an all-in-one, single-pane-of-glass defense platform that combines:
-1. **Continuous Host Telemetry** with native socket connection tracking.
-2. **Polar Threat Radar Visualizer** mapping external threats into spatial zones with laser vector targeting.
-3. **Automated Threat Intelligence Ingestion** against live feeds from CISA Known Exploited Vulnerabilities (KEV) and Abuse.ch ThreatFox IOCs.
-4. **Heuristic SIEM Log Analytics** delivering instant signature and anomaly scoring for unauthorized intrusion attempts.
-5. **Active Firewall Defense Subsystems** allowing one-click IP blacklisting, stateful rule inspection, and structured capstone audit generation.
+1. [Project Title & Overview](#-project-title--overview)
+2. [Problem Statement](#-problem-statement)
+3. [Objectives](#-objectives)
+4. [System Architecture](#-system-architecture)
+5. [Core Features](#-core-features)
+6. [Technology Stack](#-technology-stack)
+7. [Security Architecture](#-security-architecture)
+8. [SOC Workflow & Incident Lifecycle](#-soc-workflow--incident-lifecycle)
+9. [Detection Engine & Rule Framework](#-detection-engine--rule-framework)
+10. [MITRE ATT&CK Matrix Alignment](#-mitre-attck-matrix-alignment)
+11. [Threat Intelligence Ingestion](#-threat-intelligence-ingestion)
+12. [Static Malware Analysis & Quarantine](#-static-malware-analysis--quarantine)
+13. [AI Security Copilot & Guardrails](#-ai-security-copilot--guardrails)
+14. [Human-in-the-Loop Approval Model](#-human-in-the-loop-approval-model)
+15. [Installation & Local Setup](#-installation--local-setup)
+16. [Environment Configuration](#-environment-configuration)
+17. [Docker & Containerized Deployment](#-docker--containerized-deployment)
+18. [Verification & Testing](#-verification--testing)
+19. [CI/CD & Automation](#-cicd--automation)
+20. [Platform Screenshots](#-platform-screenshots)
+21. [Deterministic Demonstration Guide](#-deterministic-demonstration-guide)
+22. [OpenAPI & Endpoint Documentation](#-openapi--endpoint-documentation)
+23. [Security Model & Least Privilege](#-security-model--least-privilege)
+24. [Threat Model Summary (STRIDE)](#-threat-model-summary-stride)
+25. [Known Limitations](#-known-limitations)
+26. [Engineering Roadmap](#-engineering-roadmap)
+27. [Contributors & Maintenance](#-contributors--maintenance)
+28. [Release & Governance Documentation](#-release--governance-documentation)
+
+---
+
+## 📌 Project Title & Overview
+
+* **Project Name**: Cyber Sentinel Enterprise SOC & Threat Detection Platform
+* **Primary Scope**: Endpoint Telemetry Ingestion, SIEM Correlation, NIST Incident Response, Threat Intelligence, Static PE Inspection, and AI Security Copilot.
+* **Maturity Status**:
+  * **Implemented**: Core SIEM Detection, Dual-Mode Storage (PostgreSQL + Local Fallback), Canonical Event Normalizer, HMAC-SHA256 Telemetry Authentication, Cryptographic SHA-256 Hash Chain Timeline, In-Memory PE Analyzer, AI Delimiter/Injection Guards, Allowlisted Response Actions.
+  * **Tested**: 126 automated unit, integration, security, adversarial, and disaster recovery regression test suites (100% pass rate).
+  * **Planned**: eBPF kernel telemetry collector, TPM-backed agent hardware identity (mTLS), and multi-party dual-operator authorization.
+
+---
+
+## ⚠️ Problem Statement
+
+Modern security operations centers face three operational bottlenecks:
+1. **Telemetry Overload & Evasion**: Ingestion pipelines struggle to normalize heterogeneous event formats (Windows Event Logs, Syslog, agent JSON) while remaining vulnerable to prototype pollution and payload tampering.
+2. **Forensic Evidence Tampering**: Traditional databases allow rogue insiders or attackers with SQL access to delete or alter incident records without leaving a verifiable audit trail.
+3. **Unbounded AI Automation Risks**: Integrating Large Language Models (LLMs) into security workflows introduces prompt injection, hallucinated remediation commands, and unauthorized autonomous actions against critical infrastructure.
+
+---
+
+## 🎯 Objectives
+
+* **High-Throughput Telemetry Normalization**: Ingest and sanitize telemetry at measured throughputs exceeding 95,000 events/second.
+* **Cryptographic Tamper-Evidence**: Provide mathematical verification of incident investigation histories via SHA-256 hash chains.
+* **Enforced Human Governance**: Require explicit, authenticated dual-control operator approval before executing any containment action.
+* **Zero-Execution Static Analysis**: Inspect suspicious Windows PE files and archive headers strictly in-memory without spawning subprocesses.
+* **Resilience Under Outages**: Ensure automated fallback to persistent local stores during upstream database or network disruptions.
 
 ---
 
 ## 🏗️ System Architecture
 
 ```mermaid
-graph TD
-    subgraph Client ["Client Presentation Layer (React 18 + Vite)"]
-        UI[Glassmorphic SOC Dashboard]
-        Radar[Military-Grade Tactical Threat Radar]
-        SIEM_UI[Interactive Log Analyzer]
-        Sandbox_UI[Malware Entropy Inspector]
-        WS_Client[Socket.IO Client Real-Time Receiver]
+graph TB
+    subgraph IngestionBoundary ["Edge & Ingestion Tier"]
+        AGENT["Endpoint Agent (Node / Python)"]
+        SYSLOG["Syslog & Network Sensors"]
+        HMAC_GATE["HMAC-SHA256 Telemetry Authenticator (Timestamp Skew Check)"]
+        NORMALIZER["Canonical Event Normalizer & Prototype Defense"]
     end
 
-    subgraph Server ["Real-Time Gateway & API Layer (Node.js / Express)"]
-        Router[Express HTTP REST Router]
-        SocketIO[Socket.IO Real-Time Engine]
-        NetMonitor[Local Network Socket Telemetry Monitor]
-        AuthEngine[JWT / Non-Blocking Session Engine]
+    subgraph CoreEngine ["SIEM Processing & Detection Core"]
+        RULE_REGISTRY["Rule Registry (Single-Event, Threshold, Sequence, Correlation)"]
+        DETECTION_ENG["Stateful Detection Engine"]
+        MITRE_ENG["MITRE ATT&CK Mapper (v14 Enterprise)"]
+        CORRELATION["Stateful Multi-Source Correlator"]
     end
 
-    subgraph Intel ["Threat Intelligence & Heuristic Analytics"]
-        TF_Feed[Abuse.ch ThreatFox Live Feed Synchronizer]
-        CISA_Feed[CISA KEV Real-World Catalog]
-        HeuristicEngine[Regex / OWASP Signature Engine]
-        RuleStore[Micro-Segmented IP Firewall Ruleset]
+    subgraph ServiceLayer ["Application Services & Logic"]
+        AUTH_SVC["Auth Service (JWT HS256, Bcrypt cost=10, TOTP MFA)"]
+        INCIDENT_SVC["Incident Service (NIST SP 800-61 FSM)"]
+        TIMELINE_SVC["SHA-256 Cryptographic Timeline Ledger"]
+        MALWARE_SVC["In-Memory Static PE Byte Analyzer"]
+        AI_GUARD["AI Security Guard (Delimiter Injection Filter)"]
+        RESPONSE_SVC["Response Action Service (Allowlisted FSM)"]
+        AUDIT_SVC["Immutable Security Audit Logger"]
     end
 
-    subgraph AI ["AI Incident Copilot Layer"]
-        Gemini[Google Gemini Security AI Engine]
-        AgentTools[SOC Triage & Threat Intelligence Tools]
+    subgraph StorageTier ["Data Persistence Tier"]
+        POSTGRES[("PostgreSQL 16 (Parameterized Queries)")]
+        FALLBACK_STORE[("Local Persistent JSON Fallback Store")]
+        QUARANTINE_VAULT[("Quarantine Sample Vault (0o600 Mode)")]
     end
 
-    UI -->|REST / API| Router
-    WS_Client <-->|Bi-directional WebSocket| SocketIO
-    SocketIO -->|Stream Metrics & Attacks| NetMonitor
-    Router -->|Query Threats| TF_Feed
-    Router -->|Query Vulnerabilities| CISA_Feed
-    Router -->|Analyze Logs| HeuristicEngine
-    Router -->|Mitigate Threats| RuleStore
-    Router <-->|Triage Incidents| Gemini
-    Gemini <--> AgentTools
+    AGENT -->|HMAC-SHA256 Signed Envelope| HMAC_GATE
+    SYSLOG -->|JSON / CEF Payloads| HMAC_GATE
+    HMAC_GATE --> NORMALIZER
+    NORMALIZER --> RULE_REGISTRY
+    RULE_REGISTRY --> DETECTION_ENG
+    DETECTION_ENG --> MITRE_ENG
+    DETECTION_ENG --> CORRELATION
+    CORRELATION --> INCIDENT_SVC
+
+    INCIDENT_SVC --> TIMELINE_SVC
+    AI_GUARD --> RESPONSE_SVC
+    RESPONSE_SVC --> AUDIT_SVC
+    MALWARE_SVC --> QUARANTINE_VAULT
+
+    AUTH_SVC --> POSTGRES
+    INCIDENT_SVC --> POSTGRES
+    AUDIT_SVC --> POSTGRES
+    POSTGRES -.->|Fallback Sync| FALLBACK_STORE
 ```
 
 ---
 
-## 🌟 Key Innovations & Core Modules
+## ✨ Core Features
 
-### 1. Tactical Threat Radar System
-- **8-Point Compass Azimuth Ring:** Dynamic compass rose displaying $000^\circ\text{ N}$, $045^\circ\text{ NE}$, $090^\circ\text{ E}$, $135^\circ\text{ SE}$, $180^\circ\text{ S}$, $225^\circ\text{ SW}$, $270^\circ\text{ W}$, $315^\circ\text{ NW}$ with continuous azimuth angle tracking.
-- **Concentric Distance Graticules:** Four calibrated defensive perimeters:
-  - `SUBNET (0–25km)` — Local host and loopback connections.
-  - `GATEWAY (25–50km)` — Intranet routers and proxy relays.
-  - `PERIMETER (50–75km)` — DMZ firewall boundaries.
-  - `EXTERNAL WAN (75–100km)` — Public internet and botnet actors.
-- **Target Lock Reticle & Laser Vector Line:** Selecting any detected blip instantly locks an animated targeting crosshair `[ + ]`, traces a vector line directly from the local Sentinel Core, and renders an interactive **Target Intelligence Card** showing:
-  - Target IP & Copy Action
-  - Threat Vector Classification (e.g. `HTTPS C2 Beacon`, `SQLi Exploit`)
-  - Radial Bearing ($^\circ$), Estimated Range ($\text{km}$), and Round-Trip Time Latency ($\text{ms}$)
-  - One-Click **"⚡ QUICK BLOCK IP"** firewall mitigation.
-- **Dynamic Radar Controls:** Multi-stage Zoom (`1x`, `2x`, `4x`), Variable Sweep Speed (`FAST 2s`, `NORM 3.5s`, `DEEP 7s`), Severity Filtering (`CRITICAL`, `HIGH`, `MEDIUM`, `BLOCKED`), and Sonar Pulse Ping wave.
-
-### 2. Live Threat Intelligence Feeds
-- **Abuse.ch ThreatFox IOC Integration:** Loads and indexes hundreds of active Indicators of Compromise (C2 IP addresses, botnet controllers, payload hashes).
-- **CISA KEV Catalog Synchronization:** Ingests official vulnerabilities from the Cybersecurity and Infrastructure Security Agency's Known Exploited Vulnerabilities catalog.
-
-### 3. Rule-Based SIEM Log Analyzer
-- **Multi-Vector Detection:** Automatically parses raw server logs (Apache, Nginx, Linux auth, SSH) to flag:
-  - Brute-force threshold anomalies ($\ge 3$ failures/window).
-  - SQL Injection signatures (`UNION SELECT`, `' OR '1'='1`, `SLEEP()`).
-  - Cross-Site Scripting (`<script>`, `onerror=`, `javascript:`).
-  - Remote Command Execution (`/etc/passwd`, `; cat /dev/`, `powershell -enc`).
-- **Risk Scoring Algorithm:** Computes an aggregate risk factor ($0\text{–}100$) per IP address and tags threat severities based on frequency and payload weight.
-
-### 4. Sandboxed Malware Analyzer
-- **Static File Inspection:** Calculates SHA-256 digests and file entropy distribution to detect packed or encrypted executable headers.
-- **Behavioral Indicators:** Extracts suspicious system APIs (`VirtualAlloc`, `RegSetValueEx`, `CreateRemoteThread`, `WSAStartup`) to generate a risk verdict before binary execution.
-
-### 5. AI Incident Response Copilot
-- Powered by Google Gemini with security-tailored prompt system instructions.
-- Provides immediate remediation runbooks, CVE explainers, and firewall configuration syntax (iptables, UFW, Windows Netsh).
-
-### 6. Capstone SOC Audit Exporter
-- Generates a timestamped, structured **Capstone Incident & Security Audit Report** (`JSON`) with one click from the dashboard.
-- Includes operational metrics, host telemetry, active firewall rules, and compliance control verifications.
+| Module | Implementation Status | Technical Capability |
+| :--- | :---: | :--- |
+| **Tactical Radar Visualizer** | **Implemented** | Real-time polar coordinate canvas displaying network flows across Subnet, Gateway, Perimeter, and External zones with laser vector targeting. |
+| **Canonical Event Normalizer** | **Implemented & Tested** | Ingests heterogeneous telemetry, sanitizes strings, bounds arrays, defends against `__proto__` pollution, and outputs canonical schemas. |
+| **SIEM Detection Engine** | **Implemented & Tested** | Evaluates Single-Event, Sliding-Window Threshold, Multi-Stage Sequence, and Cross-Source Correlation rules. |
+| **NIST Incident Lifecycle** | **Implemented & Tested** | Finite State Machine (`NEW` ➔ `TRIAGED` ➔ `INVESTIGATING` ➔ `CONTAINMENT` ➔ `ERADICATION` ➔ `RECOVERY` ➔ `RESOLVED` ➔ `CLOSED`). |
+| **Immutable Hash Chain** | **Implemented & Tested** | SHA-256 Merkle-linked timeline events with mathematical verification (`GET /api/incidents/:id/timeline/verify`). |
+| **Static PE Analyzer** | **Implemented & Tested** | Zero-execution header parsing: DOS/PE headers, section entropy (Shannon calculation), import tables, and Zip Slip defenses. |
+| **Quarantine Vault** | **Implemented & Tested** | Isolated sample storage using UUID filenames, restrictive `0o600` permissions, and 7-day automated retention pruning. |
+| **AI Security Copilot** | **Implemented & Tested** | Delimiter encapsulation blocks, heuristic prompt injection scanner, outbound credential scrubber, and advisory-only execution boundaries. |
+| **Response Action Engine** | **Implemented & Tested** | Strict allowlist (`ISOLATE_ENDPOINT`, `TERMINATE_SUSPICIOUS_PROCESS`, `QUARANTINE_FILE`, `REVOKE_DEVICE_CREDENTIAL`) with human approval gates. |
 
 ---
 
-## 📐 Mathematical & Spatial Coordinate Models
+## 💻 Technology Stack
 
-### Polar-to-Cartesian Radar Projection
-Each incoming threat packet is deterministically mapped to polar coordinates $(\theta, r)$ using an IP hash function, then transformed to Cartesian coordinates $(x, y)$ on the SVG radar graticule:
+### Backend & Core Services
+* **Runtime**: Node.js `v20.x` / `v24.x` (CommonJS / ES2022)
+* **Web Framework**: Express.js with Helmet, CORS, and Express-Rate-Limit
+* **Database**: PostgreSQL 16 via connection pooling (`pg`) + local async-debounced JSON fallback
+* **Real-Time Transport**: Socket.IO (`v4.8+`) with authenticated WebSocket rooms
+* **Cryptography**: Native Node.js `crypto` (SHA-256, HMAC-SHA256, constant-time comparisons), Bcrypt.js (cost=10), Speakeasy (RFC 6238 TOTP)
 
-$$\theta = \left(\sum_{i=1}^{4} \text{oct}_i \cdot 31^{4-i}\right) \pmod{360^\circ}$$
-
-$$r_{\text{scaled}} = \min\left(88\%, \max\left(12\%, r_{\text{base}} \times Z\right)\right)$$
-
-$$x = 50\% + \left(\frac{r_{\text{scaled}}}{2}\right) \cos\left(\theta \cdot \frac{\pi}{180}\right)$$
-
-$$y = 50\% + \left(\frac{r_{\text{scaled}}}{2}\right) \sin\left(\theta \cdot \frac{\pi}{180}\right)$$
-
-*Where $Z \in \{1.0, 1.8, 2.8\}$ represents the active Zoom Factor.*
-
----
-
-## 🔌 API & Event Specification
-
-### REST Endpoints
-
-| Endpoint | Method | Purpose | Auth |
-|---|---|---|---|
-| `/api/health` | `GET` | Health check, component readiness, WebSocket discovery URL | Public |
-| `/api/health/ready` | `GET` | PostgreSQL connection pool and migration readiness check | Public |
-| `/api/metrics` | `GET` | Prometheus-compatible gauge and counter telemetry feed | Public |
-| `/api/auth/register` | `POST` | Operator account registration with bcrypt password hashing | Public |
-| `/api/auth/login` | `POST` | JWT authentication + TOTP MFA challenge verification | Public |
-| `/api/threats` | `GET` | Paginated ThreatFox IOCs and CISA KEV catalog | `VIEWER+` |
-| `/api/threats/stats` | `GET` | High-level threat count and severity distributions | `VIEWER+` |
-| `/api/logs/analyze` | `POST` | Ingests raw text logs and returns heuristic threat breakdown | `ANALYST+` |
-| `/api/protection/block-ip` | `POST` | Appends IP address to active firewall containment list | `SENIOR_ANALYST+` |
-| `/api/protection/scan-email` | `POST` | Deep heuristic analysis for spoofed headers and phishing | `ANALYST+` |
-| `/api/protection/scan-link` | `POST` | Domain, TLD, IP-based, and shortener link analysis | `ANALYST+` |
-| `/api/malware/analyze` | `POST` | In-memory PE structural analysis, Shannon entropy, imports | `ANALYST+` |
-| `/api/sandbox/simulate` | `POST` | Safe emulation of attack chains (ransomware, C2, persistence) | `ANALYST+` |
-| `/api/incidents` | `GET` / `POST` | Incident lifecycle and SHA-256 cryptographic evidence trail | `ANALYST+` |
-| `/api/incidents/:id/status` | `PATCH` | Update incident status (`TRIAGED`, `CONTAINED`, `CLOSED`) | `SENIOR_ANALYST+` |
-| `/api/audit-logs` | `GET` | Immutable security audit log repository | `ADMIN` only |
-| `/api/chatbot/message` | `POST` | Query Agentic AI Copilot (18 tools with human approval gate) | `ANALYST+` |
-
-### Real-Time WebSocket Events
-
-| Event Name | Direction | Interval | Payload Description | Auth Room |
-|---|---|---|---|---|
-| `system:metrics` | Server $\to$ Client | $2\text{s}$ | CPU, RAM, threat index, uptime, live counters | `authenticated` |
-| `attack:event` | Server $\to$ Client | $3\text{–}7\text{s}$ | Network packet, IP, threat vector, severity, status | `authenticated` |
-| `attack:history` | Server $\to$ Client | On Connect | Initial batch of historical attack events | `authenticated` |
-| `timeline:update`| Server $\to$ Client | $30\text{s}$ | 24-hour attack volume histogram | `authenticated` |
-| `alert:critical` | Server $\to$ Client | On Alert | High-severity security threat broadcast | `role:ANALYST+` |
-| `incident:new` | Server $\to$ Client | On Incident | Automated incident creation from SIEM correlation | `role:ANALYST+` |
-| `agent:step` | Server $\to$ Client | Real-time | Streaming agent reasoning, tool calls, and observations | Session room |
-| `custom:ping` | Bi-directional | $3\text{s}$ | Measures round-trip network latency in milliseconds | `authenticated` |
+### Frontend User Interface
+* **Framework**: React 18.2 with Vite build system
+* **Routing & State**: React Router DOM v6, React Context API, Lucide React icons
+* **Styling**: Tailored CSS design system with glassmorphism, responsive CSS Grid, and custom tactical HUD components
 
 ---
 
-## 💻 Local Setup & Installation
+## 🔒 Security Architecture
+
+Cyber Sentinel implements a Defense-in-Depth model across 5 distinct trust boundaries:
+
+```mermaid
+graph LR
+    subgraph TB1 ["TB-1: Perimeter Boundary"]
+        TLS["TLS 1.3 Termination"]
+        HELMET["Helmet Headers & CORS"]
+        RATE["Multi-Tier Rate Limiting"]
+    end
+
+    subgraph TB2 ["TB-2: Telemetry Ingestion"]
+        HMAC["HMAC-SHA256 Signature Check"]
+        DRIFT["Timestamp Drift (±300s)"]
+        NONCE["Replay Nonce Cache"]
+    end
+
+    subgraph TB3 ["TB-3: Authentication Tier"]
+        JWT["Short-Lived JWT (2h)"]
+        TOTP["RFC 6238 TOTP MFA"]
+        BCRYPT["Bcrypt Salted Hashes"]
+    end
+
+    subgraph TB4 ["TB-4: Persistence Tier"]
+        PARAM["Parameterized Queries ($1, $2)"]
+        HASH_CHAIN["SHA-256 Incident Timeline"]
+        AUDIT["Immutable Audit Logging"]
+    end
+
+    subgraph TB5 ["TB-5: AI & Automation"]
+        DELIM["Delimiter Encapsulation"]
+        SCRUB["Outbound Secret Scrubber"]
+        GATE["Human Approval Gate"]
+    end
+
+    TB1 --> TB2
+    TB2 --> TB3
+    TB3 --> TB4
+    TB4 --> TB5
+```
+
+1. **TB-1 (Perimeter)**: Strict HTTP security headers (CSP, HSTS, X-Frame-Options), CORS domain restriction, and tiered rate limits (50 req/15min auth, 120 req/min general).
+2. **TB-2 (Telemetry Ingestion)**: Every agent request requires an HMAC-SHA256 signature generated with the device's shared secret, verified against stored SHA-256 hashes with $\pm 300\text{s}$ timestamp drift checks.
+3. **TB-3 (Authentication & Identity)**: Bcrypt password hashing (cost=10), short-lived JWT access tokens, SHA-256 hashed refresh tokens with automatic family reuse invalidation, and mandatory TOTP MFA.
+4. **TB-4 (Data Storage)**: 100% parameterized SQL queries (`$1, $2`), preventing SQL injection; incident timelines secured with cryptographic hash chains.
+5. **TB-5 (AI & Containment)**: Inert evidence encapsulation, prompt injection heuristics, and strict advisory-only separation from response execution.
+
+---
+
+## 🔄 SOC Workflow & Incident Lifecycle
+
+Incidents follow the standardized **NIST SP 800-61 Rev. 2** Computer Security Incident Handling lifecycle:
+
+```mermaid
+stateDiagram-v2
+    [*] --> NEW: SIEM Rule Match / Manual Creation
+    NEW --> TRIAGED: Analyst Initial Review
+    TRIAGED --> INVESTIGATING: Forensic Deep Dive & IOC Query
+    INVESTIGATING --> CONTAINMENT: Host Isolation / Process Kill
+    CONTAINMENT --> ERADICATION: Threat Purged & Key Removal
+    ERADICATION --> RECOVERY: Host Baseline Verified Clean
+    RECOVERY --> RESOLVED: Root Cause Remediated
+    RESOLVED --> CLOSED: Post-Incident Review Completed
+    CLOSED --> [*]
+```
+
+* **State Validation**: `incidentStateMachine.js` strictly blocks illegal backward transitions (e.g., `CLOSED` ➔ `NEW` is rejected with `400 Bad Request`).
+* **Immutability Enforcement**: `PUT`, `PATCH`, and `DELETE` requests to `/api/incidents/:id/timeline/:eventId` are rejected with `405 Method Not Allowed`.
+
+---
+
+## ⚙️ Detection Engine & Rule Framework
+
+The Detection Engine (`backend/src/services/detection/`) supports four distinct rule architectures:
+
+| Rule Type | Description | Example Built-in Rule |
+| :--- | :--- | :--- |
+| **SINGLE_EVENT** | Instant match on discrete event attributes or regex patterns. | `RULE_OBFUSCATED_POWERSHELL_002` (Base64 PowerShell execution) |
+| **THRESHOLD** | Evaluates count of matching events over a sliding time window grouped by entity. | `RULE_BRUTE_FORCE_005` ($\ge 5$ `AUTH_FAILURE` events within 2 min) |
+| **SEQUENCE** | Multi-stage finite state machine requiring ordered event progression over time. | `RULE_KILL_CHAIN_SEQUENCE_008` (Web Exploit ➔ Process Spawn ➔ VSS Deletion) |
+| **CORRELATION** | Evaluates multi-dimensional conditions across distinct data sources. | `RULE_C2_PROCESS_CORRELATION_010` (Suspicious process + external C2 IP socket) |
+
+---
+
+## 🎯 MITRE ATT&CK Matrix Alignment
+
+All detection rules, alerts, and incident records are mapped directly to the **MITRE ATT&CK Enterprise Framework (v14)**:
+
+* **T1110.001**: *Credential Access — Password Guessing (Brute Force)*
+* **T1059.001**: *Execution — PowerShell Command and Scripting Interpreter*
+* **T1027**: *Defense Evasion — Obfuscated Files or Information*
+* **T1071.001**: *Command and Control — Application Layer Protocol: Web Protocols*
+* **T1547.001**: *Persistence — Boot or Logon Autostart Execution: Registry Run Keys*
+* **T1105**: *Command and Control — Ingress Tool Transfer (Certutil LOLBIN)*
+* **T1486**: *Impact — Data Encrypted for Impact (Ransomware Burst)*
+* **T1490**: *Impact — Inhibit System Recovery (Volume Shadow Copy Deletion)*
+* **T1190**: *Initial Access — Exploit Public-Facing Application (SQLi Probes)*
+
+---
+
+## 🌐 Threat Intelligence Ingestion
+
+Cyber Sentinel maintains automated integrations with verified external threat intelligence feeds:
+
+```mermaid
+graph LR
+    TF["Abuse.ch ThreatFox API"] -->|Scheduled Sync (24h TTL)| CACHE["In-Memory IOC Index (IP, Domain, Hash)"]
+    CISA["CISA KEV Catalog API"] -->|CVE & Exploit Enrichment| CACHE
+    FALLBACK["Static Verified IOC Catalog"] -.->|Fallback on Network Outage| CACHE
+
+    CACHE --> MATCH["iocMatcher.js Runtime Evaluation Engine"]
+    MATCH --> SIEM["SIEM Alert Enrichment & Context"]
+```
+
+* **Resilience**: If upstream threat feeds are unreachable, `liveThreatFetcher.js` falls back gracefully to a verified static baseline catalog without throwing unhandled exceptions.
+
+---
+
+## 🔬 Static Malware Analysis & Quarantine
+
+Cyber Sentinel includes an isolated static binary inspection engine:
+
+* **Zero Execution Policy**: Executables are never run or spawned. Inspection occurs purely by parsing raw byte buffers.
+* **Header & Structure Parsing**: Extracts DOS header (`MZ`), PE signature (`PE\0\0`), COFF header (Machine Architecture, Section Count, Timestamp), and Optional Header (Subsystem, ImageBase).
+* **Entropy Analysis**: Calculates Shannon entropy ($0.0 - 8.0$) across individual sections (`.text`, `.data`, `.rsrc`) to detect packing, compression, or encryption (entropy $> 7.2$ flagged as high risk).
+* **Quarantine Vault**: Samples are saved with randomized UUID filenames (`uploads/quarantine/smpl-<uuid>.bin`) and restrictive `0o600` file modes (read/write by service account only).
+
+---
+
+## 🤖 AI Security Copilot & Guardrails
+
+The AI Assistant (`/api/chatbot`) provides natural-language incident triage and remediation advice:
+
+```mermaid
+graph TD
+    PROMPT["Analyst Prompt / Incident Telemetry"] --> INJECT_GUARD["1. Prompt Injection Scanner (Heuristic Check)"]
+    INJECT_GUARD --> DELIM_BLOCK["2. Untrusted Evidence Delimiter Encapsulation"]
+    DELIM_BLOCK --> MODEL["3. Upstream LLM (Google Gemini API)"]
+    MODEL --> SECRET_SCRUB["4. Outbound Secret & Token Scrubber"]
+    SECRET_SCRUB --> ADVISORY["5. Advisory-Only Structured Proposal (PENDING)"]
+```
+
+* **Inert Delimiter Encapsulation**: All untrusted evidence is wrapped inside boundary tags `<<<UNTRUSTED_FORENSIC_EVIDENCE_START>>>` to prevent indirect prompt injection.
+* **Outbound Secret Scrubber**: Regex-scans model output before rendering, stripping JWT tokens, Google API keys, database connection strings, and private keys.
+* **Advisory-Only Boundary**: The AI model **cannot directly execute** response actions; it can only formulate structured proposals in `PENDING` status.
+
+---
+
+## 👥 Human-in-the-Loop Approval Model
+
+Containment actions enforce a strict **Dual-Control Human Authorization Gate**:
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: AI Proposal / Operator Draft
+    PENDING --> APPROVED: Authenticated Analyst Sign-Off
+    PENDING --> REJECTED: Operator Denial with Rationale
+    APPROVED --> EXECUTING: executeResponseAction()
+    EXECUTING --> SUCCESS: Action Confirmed by Host
+    EXECUTING --> FAILED: Host Error / Timeout (30s)
+    SUCCESS --> [*]
+    FAILED --> [*]
+    REJECTED --> [*]
+```
+
+* **Idempotency Protection**: Action requests accept an `idempotencyKey` parameter, preventing accidental double-execution during network retries.
+* **Shell Injection Defense**: Parameter values are validated against strict regexes (`/[;&|`$><]/`) to prevent command injection.
+
+---
+
+## 📦 Installation & Local Setup
 
 ### Prerequisites
-- **Node.js** 18.0.0 or higher
-- **npm** 9.0.0 or higher
+* **Node.js**: `v20.0.0` or higher
+* **npm**: `v9.0.0` or higher
+* **PostgreSQL** (Optional for local development; system automatically uses in-memory JSON fallback if PostgreSQL is offline).
 
-### Quick Start (Single Command)
+### Step-by-Step Installation
 
 ```bash
-# 1. Clone the repository
+# 1. Clone repository
 git clone https://github.com/yushdhiman/Cyber-Sentinel-.git
 cd Cyber-Sentinel--main
 
-# 2. Install all dependencies (Root, Backend, Frontend)
+# 2. Install root and workspace dependencies
 npm install
-cd backend && npm install && cd ../frontend && npm install && cd ..
 
-# 3. Start both Backend & Frontend concurrently
+# 3. Setup backend environment variables
+cp .env.example backend/.env
+
+# 4. (Optional) Run Database Migrations (if PostgreSQL is active)
+npm run db:migrate
+
+# 5. Start Backend API and Frontend in Development Mode
 npm run dev
 ```
 
-- **Frontend Application:** `http://localhost:5173/`
-- **Backend API & WebSocket Server:** `http://localhost:10000/`
+* **Frontend Dashboard**: `http://localhost:5173`
+* **Backend API Gateway**: `http://localhost:5000`
+* **Health Check Endpoint**: `http://localhost:5000/api/health`
 
 ---
 
-## 🎓 Capstone Defense Presentation Walkthrough
+## ⚙️ Environment Configuration
 
-When presenting this project for an evaluation, viva, or interview, follow this **5-minute demonstration script**:
+Backend configuration is managed via `backend/.env`:
 
-1. **Orientation (Minute 1):** Open the [Live Dashboard](http://localhost:5173/). Point out the real-time telemetry badge (`SOC ENGINE: LIVE SYNC`) and the four KPI cards tracking Threat Score, Velocity (APM), Blocked Mitigations, and Host CPU/RAM.
-2. **Tactical Threat Radar (Minute 2):** 
-   - Highlight the 8-point compass dial, concentric distance graticules, and the real-time azimuth tracking.
-   - Switch zoom levels (`1x` $\to$ `2x` $\to$ `4x`) and sweep speeds (`FAST` $\to$ `DEEP`).
-   - Click the **📡 PULSE** button to demonstrate the radar shockwave animation.
-   - Click any threat blip on the radar to demonstrate **Target Lock**, the laser vector line, and the **Target Intelligence HUD**.
-3. **Automated Mitigation (Minute 3):** Click **⚡ QUICK BLOCK IP** directly from the radar HUD. Show the instant toast confirmation and observe the blocked threat counter increment.
-4. **Deep Log Inspection (Minute 4):** Navigate to the **Log Analyzer**, load a sample SSH brute-force or SQL injection log, and run analysis to show instant regex signature detection and IP risk scoring.
-5. **Report Generation (Minute 5):** Return to the Dashboard and click **📄 EXPORT CAPSTONE AUDIT REPORT**. Open the downloaded JSON file to show the formal cybersecurity incident audit artifact.
+| Variable | Default Value | Description |
+| :--- | :--- | :--- |
+| `PORT` | `5000` | HTTP API port. |
+| `NODE_ENV` | `development` | Environment mode (`development`, `production`, `test`). |
+| `JWT_SECRET` | `sentinel-super-secret-key-32chars` | Secret key for signing HS256 JWT access tokens. |
+| `DATABASE_URL` | *(Optional)* | PostgreSQL connection string (`postgresql://user:pass@host:5432/db`). |
+| `GEMINI_API_KEY` | *(Optional)* | Google Gemini API key for live AI Copilot reasoning. |
+| `RATE_LIMIT_MAX` | `120` | Maximum requests per minute per client IP. |
+| `QUARANTINE_DIR` | `uploads/quarantine` | File storage path for isolated malware samples. |
 
 ---
 
-## 👨‍💻 Author & Project Attribution
+## 🐳 Docker & Containerized Deployment
 
-- **Lead Developer & Architect:** [Ayush Dhiman](https://github.com/yushdhiman)
-- **Repository:** [https://github.com/yushdhiman/Cyber-Sentinel-](https://github.com/yushdhiman/Cyber-Sentinel-)
-- **Academic Focus:** Full-Stack Cybersecurity Operations Center (SOC) Architecture & Reactive Defense Automation
+Cyber Sentinel includes multi-stage Docker configurations for containerized deployment:
+
+```bash
+# Build and run all services (Backend API + Frontend Nginx + PostgreSQL)
+docker-compose up -d --build
+
+# Inspect running containers
+docker-compose ps
+
+# View backend logs
+docker-compose logs -f backend
+```
+
+---
+
+## 🧪 Verification & Testing
+
+Cyber Sentinel maintains a comprehensive automated testing suite:
+
+```bash
+# Run complete test suite (Unit, Integration, Security, Adversarial, DR, E2E)
+npm test
+
+# Run empirical performance benchmark suite
+npm run benchmark
+
+# Run standalone disaster recovery restoration drill
+node backend/test_disaster_recovery.js
+```
+
+### Test Suite Coverage Summary:
+* **Total Automated Tests**: **126 / 126 Passing (100% Pass Rate)**
+* **Execution Duration**: $\sim 3.8\text{ seconds}$
+* **Categories Tested**:
+  * Unit Tests: Auth, JWT, Schema Normalizer, Privacy Minimizer, Detection Rules, MITRE Registry, Threat Intel.
+  * Integration Tests: Device Lifecycle, Telemetry HMAC, Incident State Machine, Audit Logger, Disaster Recovery.
+  * Security & Adversarial: Prompt Injection, Response Action FSM, Malware Quarantine, Rate Limiting, 10,000-event stress bursts.
+
+---
+
+## 🚀 CI/CD & Automation
+
+Continuous Integration workflows are configured under `.github/workflows/`:
+* **Linting & Syntax Validation**: ESLint security scan on all pull requests.
+* **Automated Security Regression**: Executes master test runner (`tests/run_all_tests.js`) across Node 20 and Node 22.
+* **Empirical Performance Gating**: Validates that SIEM normalizer throughput exceeds 75,000 events/sec.
+
+---
+
+## 📸 Platform Screenshots
+
+### Tactical SOC Threat Radar & Incident Command
+![SOC Dashboard](screenshots/dashboard.png)
+
+### AI Security Copilot & Forensic Investigation
+![AI Assistant](screenshots/assistant.png)
+
+### SIEM Log Analyzer & Detection Engineering
+![Log Analyzer](screenshots/log-analyzer.png)
+
+---
+
+## 🎮 Deterministic Demonstration Guide
+
+To execute a safe, reproducible demonstration suitable for an interview or evaluation (without requiring real malware):
+
+```bash
+# Run interactive guided demonstration
+node demo/run_demo.js
+
+# Run all 6 synthetic scenarios in succession
+node demo/run_demo.js --all
+```
+
+* **Scenario Catalog**:
+  1. `demo/scenarios/01_brute_force.json` — Password spraying campaign (`T1110.001`)
+  2. `demo/scenarios/02_suspicious_powershell.json` — Hidden Base64 PowerShell (`T1059.001`)
+  3. `demo/scenarios/03_suspicious_network.json` — CobaltStrike C2 socket beaconing (`T1071.001`)
+  4. `demo/scenarios/04_persistence_behavior.json` — Registry Run key persistence (`T1547.001`)
+  5. `demo/scenarios/05_malicious_download.json` — Certutil ingress tool transfer (`T1105`)
+  6. `demo/scenarios/06_suspicious_file_activity.json` — Rapid file encryption burst (`T1486`)
+
+Full presenter walkthrough notes are documented in [`demo/README.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/demo/README.md).
+
+---
+
+## 📖 API Documentation
+
+Complete API documentation conforming to OpenAPI 3.1.0 specifications is available:
+* **Interactive Markdown Specification**: [`docs/OPENAPI.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/OPENAPI.md)
+* **Raw OpenAPI YAML**: [`docs/openapi.yaml`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/openapi.yaml)
+
+### Primary API Routes Summary:
+* `POST /api/auth/login` — Authenticate operator & issue JWT
+* `POST /api/events` — Ingest HMAC-signed telemetry batch
+* `GET /api/incidents` — List and filter security incidents
+* `POST /api/incidents/:id/status` — Transition incident lifecycle state
+* `GET /api/incidents/:id/timeline/verify` — Validate SHA-256 timeline integrity
+* `POST /api/response-actions/:id/approve` — Human sign-off on containment proposal
+* `POST /api/malware/analyze` — Static PE binary inspection
+
+---
+
+## 🛡️ Security Model & Least Privilege
+
+Cyber Sentinel enforces strict Role-Based Access Control (RBAC):
+
+| Role | Telemetry Write | Incident Triage | Response Actions | Quarantine Admin | Audit Log Access |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **`ADMIN`** | ✅ | ✅ | ✅ Approve & Execute | ✅ Full | ✅ Full Read |
+| **`SECURITY_ENGINEER`** | ✅ | ✅ | ✅ Propose & Approve | ✅ Full | ❌ Forbidden |
+| **`INCIDENT_RESPONDER`** | ✅ | ✅ | ✅ Approve & Execute | ✅ Read / Delete | ❌ Forbidden |
+| **`SOC_ANALYST`** | ❌ (Read Only) | ✅ Update Status | ⚠️ Propose Only | 👁️ Read Only | ❌ Forbidden |
+| **`VIEWER`** | ❌ Forbidden | 👁️ Read Only | ❌ Forbidden | ❌ Forbidden | ❌ Forbidden |
+
+---
+
+## 🔬 Threat Model Summary (STRIDE)
+
+A formal threat model aligned with **NIST SP 800-30 Rev. 1** and **STRIDE** is documented in [`docs/THREAT_MODEL.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/THREAT_MODEL.md):
+
+* **THREAT-01 (External Attacker)**: Mitigated via account lockout (5 attempts), constant-time comparisons, and tiered rate limiters.
+* **THREAT-04 (Stolen Device Credential)**: Mitigated via timestamp drift checks ($\pm 300\text{s}$), HMAC nonces, and instant token revocation APIs.
+* **THREAT-06 (Malicious Insider)**: Mitigated via SHA-256 cryptographic timeline hash chains and immutable endpoint gating (`405 Method Not Allowed`).
+* **THREAT-09 (Malicious File Upload)**: Mitigated via zero-execution static byte parsing, filename sanitization, Zip Slip checks, and `0o600` vault isolation.
+* **THREAT-10 (Prompt Injection)**: Mitigated via delimiter encapsulation blocks, heuristic injection detectors, and outbound secret scrubbers.
+
+---
+
+## ⚠️ Known Limitations
+
+1. **Static Analysis Only**: The malware analysis subsystem parses PE headers and entropy statically; it does not execute dynamic sandboxing or kernel-level behavioral tracing.
+2. **In-Process Worker Execution**: CPU-intensive tasks (Bcrypt derivation, PE parsing) currently execute within Node.js worker pools rather than distributed background queue workers (e.g. Celery / BullMQ).
+3. **Hardware Identity Binding**: Device authentication uses software HMAC secrets rather than hardware TPM-backed client certificates (planned in v2.0).
+
+---
+
+## 🗺️ Engineering Roadmap
+
+```mermaid
+gantt
+    title Cyber Sentinel Feature Roadmap
+    dateFormat  YYYY-MM
+    section Identity & Host Security
+    TPM-backed Hardware Identity (mTLS)       :2026-10, 2026-12
+    eBPF Kernel Telemetry Probe (Linux)       :2026-11, 2027-01
+    section AI & Governance
+    Dual-LLM Safety Guardrail Classifier      :2026-10, 2026-11
+    Multi-Party Authorization (Four-Eyes Gate):2026-12, 2027-02
+    section Data & Scale
+    Distributed Message Queue (Kafka Ingestion):2026-11, 2027-01
+    WORM Object Lock Storage for Audit Ledger :2026-10, 2026-12
+```
+
+---
+
+## 👥 Contributors & Maintenance
+
+* **Ayush Dhiman** — Lead System Architect & Security Engineer ([@yushdhiman](https://github.com/yushdhiman))
+* **Cyber Sentinel Engineering Team**
+
+---
+
+## 📚 Release & Governance Documentation
+
+| Document | Purpose |
+| :--- | :--- |
+| [`docs/RELEASE_READINESS.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/RELEASE_READINESS.md) | Official v1.0.0 release verification, metrics, and deployment readiness report |
+| [`docs/FINAL_SECURITY_AUDIT.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/FINAL_SECURITY_AUDIT.md) | Full-stack 22-component security audit and remediation verification |
+| [`CHANGELOG.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/CHANGELOG.md) | Complete version history and feature changelog (Keep a Changelog standard) |
+| [`SECURITY.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/SECURITY.md) | Vulnerability disclosure policy, SLAs, and security response protocol |
+| [`CONTRIBUTING.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/CONTRIBUTING.md) | Contribution guidelines, secure coding standards, and PR workflows |
+| [`docs/OPENAPI.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/OPENAPI.md) | Complete OpenAPI 3.1.0 REST and WebSocket endpoint documentation |
+| [`docs/THREAT_MODEL.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/THREAT_MODEL.md) | STRIDE Threat Model across 13 distinct adversarial attack vectors |
+| [`docs/PERFORMANCE.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/PERFORMANCE.md) | Measured throughput benchmarks and latency distributions |
+| [`docs/DATA_PRIVACY.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/DATA_PRIVACY.md) | Privacy review, minimization specifications, and credential scrubbing |
+| [`docs/DISASTER_RECOVERY.md`](file:///c:/Users/Ayush/OneDrive/Desktop/Cyber-Sentinel--main/docs/DISASTER_RECOVERY.md) | Tested backup restoration procedures and recovery playbooks |
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License**. See `LICENSE` for more information.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.

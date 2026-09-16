@@ -1,0 +1,74 @@
+{
+  "scenario_id": "SCENARIO_01_BRUTE_FORCE",
+  "title": "Brute-Force Authentication Attack Campaign",
+  "description": "Adversary conducts rapid credential stuffing and password spraying against enterprise SSH and Web login portals.",
+  "is_simulation": true,
+  "mitre_technique": "T1110.001",
+  "target_device": "DEV-DEMO-WORKSTATION-01",
+  "attacker_ip": "198.51.100.44",
+  "events": [
+    {
+      "event_id": "sim-bf-0001",
+      "timestamp": "2026-09-16T09:00:01.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "AUTH_FAILURE",
+      "severity": "MEDIUM",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "admin", "domain": "CORP", "email": "admin@corp.internal" },
+      "network": { "source_ip": "198.51.100.44", "dest_port": 22, "protocol": "TCP", "direction": "INBOUND" },
+      "details": { "failureReason": "Bad password", "attemptCount": 1 }
+    },
+    {
+      "event_id": "sim-bf-0002",
+      "timestamp": "2026-09-16T09:00:03.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "AUTH_FAILURE",
+      "severity": "MEDIUM",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "root", "domain": "CORP", "email": "root@corp.internal" },
+      "network": { "source_ip": "198.51.100.44", "dest_port": 22, "protocol": "TCP", "direction": "INBOUND" },
+      "details": { "failureReason": "Bad password", "attemptCount": 2 }
+    },
+    {
+      "event_id": "sim-bf-0003",
+      "timestamp": "2026-09-16T09:00:05.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "AUTH_FAILURE",
+      "severity": "MEDIUM",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "service_account", "domain": "CORP" },
+      "network": { "source_ip": "198.51.100.44", "dest_port": 22, "protocol": "TCP", "direction": "INBOUND" },
+      "details": { "failureReason": "Bad password", "attemptCount": 3 }
+    },
+    {
+      "event_id": "sim-bf-0004",
+      "timestamp": "2026-09-16T09:00:07.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "AUTH_FAILURE",
+      "severity": "HIGH",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "analyst", "domain": "CORP" },
+      "network": { "source_ip": "198.51.100.44", "dest_port": 22, "protocol": "TCP", "direction": "INBOUND" },
+      "details": { "failureReason": "Bad password", "attemptCount": 4 }
+    },
+    {
+      "event_id": "sim-bf-0005",
+      "timestamp": "2026-09-16T09:00:09.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "AUTH_FAILURE",
+      "severity": "HIGH",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "it_support", "domain": "CORP" },
+      "network": { "source_ip": "198.51.100.44", "dest_port": 22, "protocol": "TCP", "direction": "INBOUND" },
+      "details": { "failureReason": "Account lockout triggered after 5 failures", "attemptCount": 5 }
+    }
+  ],
+  "expected_detection_rule": "RULE_BRUTE_FORCE_005",
+  "expected_mitre_technique": "T1110.001 - Password Guessing",
+  "recommended_response": "BLOCK_IP (198.51.100.44)"
+}

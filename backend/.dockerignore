@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.git
+.gitignore
+*.md
+test_*.js
+data/quarantine/*
+!data/quarantine/.gitkeep

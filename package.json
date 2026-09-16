@@ -7,8 +7,11 @@
     "dev:frontend": "vite frontend",
     "dev:backend": "nodemon backend/src/server.js",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "test": "node backend/test_capstone_pipeline.js",
+    "test": "node tests/run_all_tests.js",
+    "test:all-suites": "node tests/run_all_tests.js",
+    "test:pipeline": "node backend/test_capstone_pipeline.js",
     "test:worst-case": "node backend/test_worst_case_scenarios.js",
+    "benchmark": "node tests/benchmark_performance.js",
     "build": "cd frontend && npm install --include=dev && npm run build && cd ../backend && npm install --include=dev",
     "start": "node backend/src/server.js"
   },

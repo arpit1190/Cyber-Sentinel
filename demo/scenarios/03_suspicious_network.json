@@ -1,0 +1,42 @@
+{
+  "scenario_id": "SCENARIO_03_SUSPICIOUS_NETWORK",
+  "title": "Command and Control (C2) Network Socket Beaconing",
+  "description": "Endpoint establishes an active outbound socket connection to a high-risk external IP identified in the ThreatFox threat intelligence catalog.",
+  "is_simulation": true,
+  "mitre_technique": "T1071.001",
+  "target_device": "DEV-DEMO-WORKSTATION-01",
+  "events": [
+    {
+      "event_id": "sim-net-0001",
+      "timestamp": "2026-09-16T09:10:00.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "IOC_MATCH",
+      "severity": "CRITICAL",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "process": { "name": "rundll32.exe", "pid": 6120, "path": "C:\\Windows\\System32\\rundll32.exe" },
+      "network": {
+        "source_ip": "192.168.1.105",
+        "source_port": 49822,
+        "dest_ip": "185.220.101.5",
+        "dest_port": 443,
+        "protocol": "TCP",
+        "direction": "OUTBOUND",
+        "domain": "c2.threat-actor.org"
+      },
+      "metadata": {
+        "ioc_match": {
+          "ioc": "185.220.101.5",
+          "threat_type": "botnet_c2",
+          "malware_family": "CobaltStrike",
+          "confidence": 95,
+          "source": "ThreatFox"
+        }
+      }
+    }
+  ],
+  "expected_detection_rule": "RULE_C2_PROCESS_CORRELATION_010",
+  "expected_mitre_technique": "T1071.001 - Application Layer Protocol: C2",
+  "recommended_response": "BLOCK_IP (185.220.101.5) & ISOLATE_ENDPOINT"
+}

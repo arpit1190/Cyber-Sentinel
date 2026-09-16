@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
 const { setLastScanResult } = require('../data/securityStore');
+const { scanConfig } = require('../utils/scanner');
 const { logSecurityEvent, AuditActions } = require('../utils/auditLogger');
 
 const router = express.Router();

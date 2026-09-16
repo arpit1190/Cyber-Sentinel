@@ -13,6 +13,13 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { isPostgresConnected, query } = require('./db');
+const { validateStateTransition, IncidentStatus, normalizeStatus } = require('../services/incidentStateMachine');
+const {
+  TimelineEventType,
+  appendEventToTimeline,
+  verifyTimelineIntegrity,
+  paginateTimeline,
+} = require('../services/timelineService');
 
 const DATA_FILE = path.join(__dirname, 'security_state.json');
 
@@ -108,13 +115,39 @@ function loadState() {
   }
 }
 
-// Persist state atomically
-function persistState() {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), 'utf8');
-  } catch (err) {
-    console.error('[SecurityStore] Failed to write security state:', err.message);
+// Persist state atomically and asynchronously with debouncing to prevent event-loop freezing
+let persistTimeout = null;
+
+function persistState(immediate = false) {
+  if (immediate) {
+    if (persistTimeout) {
+      clearTimeout(persistTimeout);
+      persistTimeout = null;
+    }
+    try {
+      fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[SecurityStore] Failed to write security state:', err.message);
+    }
+    return;
   }
+
+  if (persistTimeout) return;
+  persistTimeout = setTimeout(() => {
+    persistTimeout = null;
+    try {
+      const data = JSON.stringify(state, null, 2);
+      fs.writeFile(DATA_FILE, data, 'utf8', (err) => {
+        if (err) console.error('[SecurityStore] Failed to async write security state:', err.message);
+      });
+    } catch (err) {
+      console.error('[SecurityStore] Failed to serialize security state:', err.message);
+    }
+  }, 25);
+}
+
+function flushState() {
+  persistState(true);
 }
 
 // Initial load on import
@@ -224,9 +257,29 @@ function getAuditLogs(limit = 100) {
 }
 
 // ── Incident Management Operations ─────────────────────────────────────────
+
 function createIncident(params = {}) {
   const p = (params && typeof params === 'object') ? params : {};
-  const { title = 'Untitled Incident', severity, category, description, relatedIps = [], relatedAlerts = [], mitreTechniques = [], evidence = null, createdBy = 'correlation-engine' } = p;
+  const {
+    title = 'Untitled Incident',
+    severity = 'HIGH',
+    confidence = 80,
+    category = 'THREAT_DETECTION',
+    description = '',
+    assignee = 'Unassigned',
+    affectedDevices = [],
+    affected_devices = [],
+    detections = [],
+    indicators = [],
+    relatedIps = [],
+    related_ips = [],
+    relatedAlerts = [],
+    mitreTechniques = [],
+    mitre_techniques = [],
+    evidence = null,
+    createdBy = 'correlation-engine'
+  } = p;
+
   const incId = `INC-${Date.now().toString().slice(-5)}${crypto.randomInt(10, 99)}`;
   
   let evidenceHash = null;
@@ -241,34 +294,79 @@ function createIncident(params = {}) {
     }
   }
 
+  const rawIps = indicators.length > 0 ? indicators : (relatedIps.length > 0 ? relatedIps : related_ips);
+  const rawDevs = affectedDevices.length > 0 ? affectedDevices : affected_devices;
+  const rawMitre = mitreTechniques.length > 0 ? mitreTechniques : mitre_techniques;
+
+  const now = new Date().toISOString();
+
   const incident = {
     id: incId,
-    title,
+    title: String(title).trim(),
     severity: (severity || 'HIGH').toUpperCase(),
+    confidence: typeof confidence === 'number' ? Math.min(Math.max(confidence, 0), 100) : 80,
     category: category || 'THREAT_DETECTION',
-    status: 'NEW',
-    description,
-    assignee: 'Unassigned',
-    relatedIps: Array.isArray(relatedIps) ? relatedIps : [relatedIps],
+    status: IncidentStatus.NEW,
+    description: description || '',
+    assignee: assignee || 'Unassigned',
+    affectedDevices: Array.isArray(rawDevs) ? rawDevs : (rawDevs ? [rawDevs] : []),
+    detections: Array.isArray(detections) ? detections : (detections ? [detections] : []),
+    indicators: Array.isArray(rawIps) ? rawIps : (rawIps ? [rawIps] : []),
+    relatedIps: Array.isArray(rawIps) ? rawIps : (rawIps ? [rawIps] : []),
     relatedAlerts: Array.isArray(relatedAlerts) ? relatedAlerts : [relatedAlerts],
-    mitreTechniques: Array.isArray(mitreTechniques) ? mitreTechniques : [mitreTechniques],
+    mitreTechniques: Array.isArray(rawMitre) ? rawMitre : [rawMitre],
+    notes: [],
+    responseActions: [],
     evidence: {
       payload: storedEvidence,
       sha256: evidenceHash,
-      preservedAt: new Date().toISOString(),
+      preservedAt: now,
     },
     evidenceHash: evidenceHash,
-    timeline: [
-      {
-        timestamp: new Date().toISOString(),
-        action: 'INCIDENT_CREATED',
-        actor: createdBy,
-        note: `Incident automatically flagged and correlated: ${title}`,
-      }
-    ],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    timeline: [],
+    createdAt: now,
+    updatedAt: now,
+    resolvedAt: null,
+    closedAt: null,
   };
+
+  // Seed genesis timeline events: Telemetry -> Detection -> Incident Creation
+  if (p.relatedEvent) {
+    incident.timeline = appendEventToTimeline(incident.timeline, {
+      eventType: TimelineEventType.TELEMETRY_INGESTED,
+      action: 'TELEMETRY_INGESTED',
+      actor: 'ENDPOINT_AGENT',
+      source: 'ENDPOINT_AGENT',
+      description: `Raw telemetry event ingested from endpoint`,
+      relatedEvent: p.relatedEvent,
+    });
+  }
+
+  if (p.relatedDetection) {
+    incident.timeline = appendEventToTimeline(incident.timeline, {
+      eventType: TimelineEventType.DETECTION_ALERT,
+      action: 'DETECTION_ALERT',
+      actor: 'DETECTION_ENGINE',
+      source: 'DETECTION_ENGINE',
+      description: `Detection rule triggered: ${incident.category || title}`,
+      relatedDetection: p.relatedDetection,
+    });
+  }
+
+  // Genesis INCIDENT_CREATED event
+  incident.timeline = appendEventToTimeline(incident.timeline, {
+    eventType: TimelineEventType.INCIDENT_CREATED,
+    action: 'INCIDENT_CREATED',
+    actor: createdBy,
+    source: 'SOC_CORRELATION_ENGINE',
+    description: `Incident automatically flagged and correlated: ${title}`,
+    relatedDetection: p.relatedDetection || null,
+    metadata: {
+      initialStatus: IncidentStatus.NEW,
+      severity: incident.severity,
+      confidence: incident.confidence,
+    }
+  });
 
   state.incidents.unshift(incident);
   if (state.incidents.length > 500) {
@@ -305,7 +403,8 @@ function createIncident(params = {}) {
 
 function getIncidents(status = null) {
   if (status && status !== 'ALL') {
-    return state.incidents.filter(i => (i.status || '').toUpperCase() === status.toUpperCase());
+    const normalized = normalizeStatus(status);
+    return state.incidents.filter(i => i.status === normalized || i.status === status.toUpperCase());
   }
   return state.incidents;
 }
@@ -314,25 +413,85 @@ function getIncidentById(id) {
   return state.incidents.find(i => i.id === id) || null;
 }
 
+function updateIncident(id, updates = {}, actor = 'analyst', note = '') {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+
+  const now = new Date().toISOString();
+  if (updates.title !== undefined) incident.title = updates.title;
+  if (updates.description !== undefined) incident.description = updates.description;
+  if (updates.severity !== undefined) incident.severity = updates.severity;
+  if (updates.confidence !== undefined) incident.confidence = updates.confidence;
+  if (updates.affectedDevices !== undefined) incident.affectedDevices = updates.affectedDevices;
+  if (updates.indicators !== undefined) {
+    incident.indicators = updates.indicators;
+    incident.relatedIps = updates.indicators;
+  }
+  if (updates.assignee !== undefined) incident.assignee = updates.assignee;
+
+  incident.updatedAt = now;
+  incident.timeline = appendEventToTimeline(incident.timeline || [], {
+    eventType: TimelineEventType.INCIDENT_UPDATED,
+    action: 'INCIDENT_UPDATED',
+    actor,
+    source: 'SOC_PORTAL',
+    description: note || `Incident fields updated by ${actor}`,
+    metadata: { changes: updates },
+  });
+
+  persistState();
+  return incident;
+}
+
 function updateIncidentStatus(id, newStatus, actor = 'analyst', note = '') {
   const incident = state.incidents.find(i => i.id === id);
   if (!incident) return null;
 
-  const validStatuses = ['NEW', 'TRIAGED', 'INVESTIGATING', 'CONTAINED', 'CLOSED', 'FALSE_POSITIVE'];
-  const upperStatus = newStatus.toUpperCase();
-  if (!validStatuses.includes(upperStatus)) {
-    throw new Error(`Invalid status '${newStatus}'. Must be one of: ${validStatuses.join(', ')}`);
+  const transitionCheck = validateStateTransition(incident.status, newStatus);
+  if (!transitionCheck.valid) {
+    const err = new Error(transitionCheck.error);
+    err.status = 400;
+    throw err;
   }
 
   const oldStatus = incident.status;
-  incident.status = upperStatus;
-  incident.updatedAt = new Date().toISOString();
-  incident.timeline.push({
-    timestamp: new Date().toISOString(),
+  const canonicalNext = transitionCheck.to;
+  const now = new Date().toISOString();
+
+  incident.status = canonicalNext;
+  incident.updatedAt = now;
+
+  let eventType = TimelineEventType.STATUS_CHANGED;
+  if (canonicalNext === IncidentStatus.RESOLVED) {
+    incident.resolvedAt = now;
+    eventType = TimelineEventType.INCIDENT_RESOLVED;
+  } else if (canonicalNext === IncidentStatus.CLOSED) {
+    incident.closedAt = now;
+    if (!incident.resolvedAt) incident.resolvedAt = now;
+    eventType = TimelineEventType.INCIDENT_CLOSED;
+  } else if (canonicalNext === IncidentStatus.INVESTIGATING) {
+    eventType = TimelineEventType.INVESTIGATION_STARTED;
+    if (oldStatus === IncidentStatus.CLOSED) {
+      // Re-opened
+      incident.closedAt = null;
+      incident.resolvedAt = null;
+    }
+  }
+
+  incident.timeline = appendEventToTimeline(incident.timeline || [], {
+    eventType,
     action: 'STATUS_CHANGE',
     actor,
-    note: note || `Status transitioned from ${oldStatus} to ${upperStatus}`,
+    source: 'SOC_PORTAL',
+    description: note || `Status transitioned from ${oldStatus} to ${canonicalNext}`,
+    previousStatus: oldStatus,
+    newStatus: canonicalNext,
+    metadata: {
+      previousStatus: oldStatus,
+      newStatus: canonicalNext,
+    },
   });
+
   persistState();
 
   if (isPostgresConnected()) {
@@ -343,6 +502,157 @@ function updateIncidentStatus(id, newStatus, actor = 'analyst', note = '') {
   }
 
   return incident;
+}
+
+function assignIncident(id, assignee, actor = 'analyst', note = '') {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+
+  const oldAssignee = incident.assignee || 'Unassigned';
+  const newAssignee = String(assignee).trim();
+  const now = new Date().toISOString();
+
+  incident.assignee = newAssignee;
+  incident.updatedAt = now;
+
+  incident.timeline = appendEventToTimeline(incident.timeline || [], {
+    eventType: TimelineEventType.ANALYST_ASSIGNED,
+    action: 'INCIDENT_ASSIGNED',
+    actor,
+    source: 'SOC_PORTAL',
+    description: note || `Incident reassigned from ${oldAssignee} to ${newAssignee}`,
+    previousAssignee: oldAssignee,
+    newAssignee: newAssignee,
+    metadata: {
+      previousAssignee: oldAssignee,
+      newAssignee: newAssignee,
+    },
+  });
+
+  persistState();
+  return incident;
+}
+
+function closeIncident(id, resolutionReason = 'RESOLVED', actor = 'analyst', note = '') {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+
+  return updateIncidentStatus(
+    id,
+    IncidentStatus.CLOSED,
+    actor,
+    note || `Incident closed with reason: ${resolutionReason}`
+  );
+}
+
+function addIncidentNote(id, actor = 'analyst', note = '') {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+
+  const now = new Date().toISOString();
+  const noteEntry = {
+    id: `note-${Date.now()}-${crypto.randomInt(10, 99)}`,
+    author: actor,
+    note: String(note).trim(),
+    createdAt: now,
+  };
+
+  incident.notes = incident.notes || [];
+  incident.notes.push(noteEntry);
+
+  incident.timeline = appendEventToTimeline(incident.timeline || [], {
+    eventType: TimelineEventType.NOTE_ADDED,
+    actor,
+    source: 'SOC_ANALYST',
+    description: String(note).trim(),
+  });
+  incident.updatedAt = now;
+  persistState();
+
+  if (isPostgresConnected()) {
+    query(
+      `UPDATE incidents SET timeline = $1, updated_at = NOW() WHERE id = $2`,
+      [JSON.stringify(incident.timeline), id]
+    ).catch(e => console.error('[DB] Error adding incident note in PostgreSQL:', e.message));
+  }
+
+  return incident;
+}
+
+function addResponseAction(id, actionData = {}, actor = 'analyst') {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+
+  const now = new Date().toISOString();
+  const actionEntry = {
+    id: `act-${Date.now()}-${crypto.randomInt(10, 99)}`,
+    actionType: actionData.actionType || 'CONTAINMENT_ACTION',
+    target: actionData.target,
+    parameters: actionData.parameters || {},
+    status: actionData.status || 'EXECUTED',
+    executedBy: actor,
+    timestamp: now,
+    notes: actionData.notes || '',
+  };
+
+  incident.responseActions = incident.responseActions || [];
+  incident.responseActions.push(actionEntry);
+
+  incident.timeline = appendEventToTimeline(incident.timeline || [], {
+    eventType: TimelineEventType.RESPONSE_ACTION_EXECUTED,
+    actor,
+    source: 'SOAR_ENGINE',
+    description: `Executed response action: ${actionEntry.actionType} targeting ${actionEntry.target}`,
+    relatedResponseAction: actionEntry,
+    metadata: {
+      actionId: actionEntry.id,
+      target: actionEntry.target,
+      actionType: actionEntry.actionType,
+    },
+  });
+
+  incident.updatedAt = now;
+  persistState();
+  return incident;
+}
+
+function appendTimelineEvent(id, eventData = {}, actor = null, source = null) {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+
+  const resolvedActor = eventData.actor || actor || 'SYSTEM';
+  const resolvedSource = eventData.source || source || 'SOC_ANALYST';
+
+  const now = new Date().toISOString();
+  incident.timeline = appendEventToTimeline(incident.timeline || [], {
+    ...eventData,
+    actor: resolvedActor,
+    source: resolvedSource,
+  });
+
+  incident.updatedAt = now;
+  persistState();
+
+  if (isPostgresConnected()) {
+    query(
+      `UPDATE incidents SET timeline = $1, updated_at = NOW() WHERE id = $2`,
+      [JSON.stringify(incident.timeline), id]
+    ).catch(e => console.error('[DB] Error appending timeline event in PostgreSQL:', e.message));
+  }
+
+  return incident.timeline[incident.timeline.length - 1];
+}
+
+function getIncidentTimeline(id, options = {}) {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+  return paginateTimeline(incident.timeline || [], options);
+}
+
+function verifyIncidentTimelineIntegrity(id) {
+  const incident = state.incidents.find(i => i.id === id);
+  if (!incident) return null;
+  return verifyTimelineIntegrity(incident.timeline || []);
 }
 
 // ── Malware Scan Reports ───────────────────────────────────────────────────
@@ -394,7 +704,18 @@ module.exports = {
   createIncident,
   getIncidents,
   getIncidentById,
+  updateIncident,
   updateIncidentStatus,
+  assignIncident,
+  closeIncident,
+  addIncidentNote,
+  addResponseAction,
+  appendTimelineEvent,
+  getIncidentTimeline,
+  verifyIncidentTimelineIntegrity,
+  TimelineEventType,
+  IncidentStatus,
+  flushState,
   addScan,
   getScans,
   setLastScanResult,

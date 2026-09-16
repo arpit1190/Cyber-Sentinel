@@ -17,11 +17,10 @@ const getSocketUrl = () => {
   if (import.meta.env.DEV) {
     return 'http://localhost:5000';
   }
-  // If hosted on Render itself, use origin; otherwise default to active Render backend
-  if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+  if (typeof window !== 'undefined' && window.location.origin) {
     return window.location.origin;
   }
-  return 'https://cyber-sentinel-1cdn.onrender.com';
+  return '';
 };
 
 const SOCKET_URL = getSocketUrl();

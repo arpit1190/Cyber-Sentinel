@@ -1,0 +1,1140 @@
+openapi: 3.1.0
+info:
+  title: Cyber Sentinel API
+  version: 1.0.0
+  description: |
+    # Cyber Sentinel SOC Platform API Specification
+    
+    Enterprise AI-assisted Security Operations Center (SOC) REST & Telemetry API.
+    
+    ## Security Guarantees & Features:
+    * **Zero-Trust Telemetry**: HMAC-SHA256 canonical message signing and timestamp drift validation.
+    * **Role-Based Access Control (RBAC)**: Fine-grained permissions across `ADMIN`, `SOC_ANALYST`, `SECURITY_ENGINEER`, `ENDPOINT_OPERATOR`, `VIEWER`.
+    * **Cryptographic Incident Timeline**: Tamper-evident SHA-256 hash chains for all incident timeline modifications.
+    * **AI Security Guardrails**: Prompt injection defense, evidence delimiter encapsulation, and human-in-the-loop approval gating.
+    * **Immutable Audit Logging**: Comprehensive security audit trail for all sensitive administrative and containment actions.
+servers:
+  - url: http://localhost:5000
+    description: Local Development / Docker Environment
+  - url: https://api.cybersentinel.defense
+    description: Production SOC Instance
+
+paths:
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. HEALTH & OBSERVABILITY
+  # ──────────────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      summary: Liveness Probe
+      description: Returns service liveness, uptime, and operational mode of all backend subsystems.
+      tags: [Health & Observability]
+      responses:
+        '200':
+          description: Service is alive.
+          content:
+            application/json:
+              example:
+                status: "ok"
+                timestamp: "2026-09-16T00:30:00.000Z"
+                service: "cyber-sentinel-api"
+                uptime: 3600.5
+                websocket: "enabled"
+                components:
+                  database: "connected"
+                  aiCopilot: "agentic"
+                  threatIntel: "live"
+                  correlationEngine: "active"
+                  realtimeEngine: "active"
+
+  /ready:
+    get:
+      summary: Readiness Probe
+      description: Evaluates database connectivity and service dependency readiness.
+      tags: [Health & Observability]
+      responses:
+        '200':
+          description: All dependencies ready.
+          content:
+            application/json:
+              example:
+                status: "ready"
+                database: "connected"
+                uptime: 3600.5
+                timestamp: "2026-09-16T00:30:00.000Z"
+        '503':
+          description: Dependency unavailable / degraded.
+          content:
+            application/json:
+              example:
+                status: "degraded"
+                error: "Database connection failed"
+                timestamp: "2026-09-16T00:30:00.000Z"
+
+  /metrics:
+    get:
+      summary: Prometheus & JSON Metrics
+      description: |
+        Returns telemetry metrics, authentication counts, latency histograms, and detection counters.
+        Guarded by METRICS_TOKEN or Bearer token with ADMIN/AUDITOR privileges.
+      tags: [Health & Observability]
+      security:
+        - BearerAuth: []
+        - MetricsTokenAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [prometheus, json]
+          description: Metrics output format.
+      responses:
+        '200':
+          description: Metrics snapshot.
+          content:
+            text/plain:
+              example: |
+                # HELP http_requests_total Total HTTP requests handled
+                # TYPE http_requests_total counter
+                http_requests_total{method="GET",path="/health",status="200"} 4210
+            application/json:
+              example:
+                service: "cyber-sentinel-api"
+                uptimeSeconds: 3600
+                metrics:
+                  requestsTotal: 4210
+                  telemetryAccepted: 154200
+                  telemetryRejected: 3
+                  detectionsCount: 42
+                  incidentsCount: 8
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2. AUTHENTICATION & IDENTITY
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/auth/register:
+    post:
+      summary: Register Operator
+      description: Registers a new SOC analyst account with NIST-compliant password validation.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name:
+                  type: string
+                  example: "Alex Vance"
+                email:
+                  type: string
+                  format: email
+                  example: "alex.vance@sentinel.defense"
+                password:
+                  type: string
+                  format: password
+                  example: "Cyb3r$entinel#2026!SecOps"
+                phone:
+                  type: string
+                  example: "+1-555-0199"
+      responses:
+        '201':
+          description: Operator account registered.
+          content:
+            application/json:
+              example:
+                message: "Account registered successfully"
+                token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                refreshToken: "a9f3b8c2e174..."
+                user:
+                  id: "usr-4928"
+                  name: "Alex Vance"
+                  email: "alex.vance@sentinel.defense"
+                  role: "SOC_ANALYST"
+                  createdAt: "2026-09-16T00:00:00.000Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email or username already exists.
+
+  /api/auth/login:
+    post:
+      summary: Authenticate Operator
+      description: |
+        Authenticates credentials using constant-time verification.
+        Returns JWT access token, rotation refresh token, or an MFA challenge ticket if TOTP is active.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "alex.vance@sentinel.defense"
+                password:
+                  type: string
+                  format: password
+                  example: "Cyb3r$entinel#2026!SecOps"
+      responses:
+        '200':
+          description: Successful authentication or MFA challenge.
+          content:
+            application/json:
+              examples:
+                directSuccess:
+                  summary: Direct Login Success
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    refreshToken: "e7c10b4928..."
+                    user:
+                      id: "usr-4928"
+                      email: "alex.vance@sentinel.defense"
+                      role: "SOC_ANALYST"
+                mfaRequired:
+                  summary: MFA Challenge Required
+                  value:
+                    mfaRequired: true
+                    mfaTicket: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    message: "MFA challenge required. Provide 6-digit TOTP code."
+        '401':
+          description: Invalid credentials or account locked.
+          content:
+            application/json:
+              example:
+                error: "Invalid email or password."
+        '429':
+          description: Account locked out due to progressive brute force protection.
+
+  /api/auth/verify-mfa:
+    post:
+      summary: Verify MFA Challenge
+      description: Validates an RFC 6238 6-digit TOTP code against the MFA challenge ticket.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mfaTicket, code]
+              properties:
+                mfaTicket:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                code:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: MFA verified and session tokens issued.
+        '401':
+          description: Invalid or expired TOTP code.
+
+  /api/auth/refresh:
+    post:
+      summary: Rotate Refresh Token
+      description: Exchanges a single-use refresh token for a new access token and rotated refresh token.
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  example: "e7c10b49281a9f..."
+      responses:
+        '200':
+          description: Tokens refreshed.
+        '401':
+          description: Invalid token or reuse/theft detected.
+
+  /api/auth/logout:
+    post:
+      summary: Terminate Session
+      description: Invalidates the supplied refresh token family.
+      tags: [Authentication]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Logged out.
+
+  /api/auth/logout-all:
+    post:
+      summary: Invalidate All Sessions
+      description: Revokes all active refresh tokens for the authenticated operator.
+      tags: [Authentication]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All sessions revoked.
+
+  /api/auth/mfa/setup:
+    get:
+      summary: Initialize MFA Configuration
+      description: Generates a Base32 TOTP secret and otpauth URI for QR code setup.
+      tags: [Authentication]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: TOTP secret generated.
+          content:
+            application/json:
+              example:
+                secret: "JBSWY3DPEHPK3PXP"
+                otpauthUri: "otpauth://totp/CyberSentinel:alex@sentinel.defense?secret=JBSWY3DPEHPK3PXP&issuer=CyberSentinel"
+                issuer: "CyberSentinel"
+                account: "alex@sentinel.defense"
+
+  /api/auth/mfa/enable:
+    post:
+      summary: Activate MFA
+      description: Activates TOTP enforcement after verifying the first 6-digit code.
+      tags: [Authentication]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [secret, code]
+              properties:
+                secret:
+                  type: string
+                code:
+                  type: string
+      responses:
+        '200':
+          description: MFA activated.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. ENDPOINT FLEET & DEVICE MANAGEMENT
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/devices/enroll:
+    post:
+      summary: Enroll Endpoint Device
+      description: Registers a new endpoint agent and issues a unique cryptographic device secret.
+      tags: [Devices]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, platform, hostname, ipAddress]
+              properties:
+                name:
+                  type: string
+                  example: "DC-PRIMARY-01"
+                platform:
+                  type: string
+                  enum: [WINDOWS, LINUX, MACOS]
+                  example: "WINDOWS"
+                hostname:
+                  type: string
+                  example: "dc-pri-01.corp.internal"
+                ipAddress:
+                  type: string
+                  example: "10.0.1.10"
+                agentVersion:
+                  type: string
+                  example: "2.4.0"
+      responses:
+        '201':
+          description: Device enrolled and secret issued.
+          content:
+            application/json:
+              example:
+                device:
+                  id: "dev-91823"
+                  name: "DC-PRIMARY-01"
+                  platform: "WINDOWS"
+                  hostname: "dc-pri-01.corp.internal"
+                  ipAddress: "10.0.1.10"
+                  status: "ACTIVE"
+                  enrolledAt: "2026-09-16T00:00:00.000Z"
+                deviceSecret: "sec_dev_91823_a9b8c7d6e5f4..."
+
+  /api/devices:
+    get:
+      summary: List Endpoints
+      description: Returns fleet endpoints with status, last heartbeat, and risk score.
+      tags: [Devices]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, ISOLATED, REVOKED, OFFLINE]
+      responses:
+        '200':
+          description: Device list.
+
+  /api/devices/{id}:
+    get:
+      summary: Get Endpoint by ID
+      tags: [Devices]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Endpoint details.
+
+  /api/devices/{id}/revoke:
+    post:
+      summary: Revoke Endpoint Credentials
+      description: Permanently revokes endpoint authentication credentials and rejects future telemetry.
+      tags: [Devices]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: "Suspected rootkit compromise"
+      responses:
+        '200':
+          description: Device revoked.
+
+  /api/devices/{id}/rotate-credential:
+    post:
+      summary: Rotate Endpoint Secret
+      description: Rotates the HMAC device secret key and invalidates the previous credential.
+      tags: [Devices]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Secret rotated.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. TELEMETRY & EVENT INGESTION
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/events:
+    post:
+      summary: Ingest HMAC-Signed Telemetry
+      description: |
+        Ingests heterogeneous endpoint telemetry events.
+        Requires valid HMAC-SHA256 signature headers computed over canonical HTTP request metadata.
+      tags: [Telemetry & Events]
+      parameters:
+        - name: X-Device-Id
+          in: header
+          required: true
+          schema:
+            type: string
+            example: "dev-91823"
+        - name: X-Timestamp
+          in: header
+          required: true
+          schema:
+            type: integer
+            example: 1789498800000
+        - name: X-Nonce
+          in: header
+          required: true
+          schema:
+            type: string
+            example: "nonce-9a8b7c6d"
+        - name: X-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+            example: "a8f9c0e2d1..."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/TelemetryEvent'
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/TelemetryEvent'
+      responses:
+        '202':
+          description: Events accepted, normalized, and evaluated by detection engine.
+          content:
+            application/json:
+              example:
+                success: true
+                processed: 1
+                detectionsCount: 1
+                detections:
+                  - detection_id: "det-4910"
+                    rule_id: "RULE-T1059-PSH"
+                    rule_name: "Obfuscated PowerShell Execution"
+                    severity: "HIGH"
+                    incident_id: "INC-8812"
+        '401':
+          description: Invalid HMAC signature or expired timestamp.
+
+    get:
+      summary: Query Recent Telemetry Buffer
+      tags: [Telemetry & Events]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: eventType
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [CRITICAL, HIGH, MEDIUM, LOW, INFO]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Event stream.
+
+  /api/events/analytics:
+    get:
+      summary: SOC Detection Analytics
+      description: Computes real-time telemetry ingestion rates, severity breakdowns, top affected devices, and top threat indicators.
+      tags: [Telemetry & Events]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Analytics aggregate.
+          content:
+            application/json:
+              example:
+                success: true
+                totalEventsBuffered: 1000
+                totalDetections: 42
+                ingestionRateEventsPerSec: 125.4
+                bySeverity:
+                  CRITICAL: 4
+                  HIGH: 12
+                  MEDIUM: 18
+                  LOW: 8
+                byMitre:
+                  T1110: 8
+                  T1059.001: 14
+                topDevices:
+                  - device: "dev-91823"
+                    count: 18
+                topIndicators:
+                  - indicator: "198.51.100.22"
+                    count: 24
+                    type: "IPv4"
+
+  /api/events/rules:
+    get:
+      summary: List Detection Rules
+      tags: [Telemetry & Events]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: SIEM rule registry catalog.
+
+  /api/events/detections:
+    get:
+      summary: Query Active Detections
+      tags: [Telemetry & Events]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Detections list.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 5. INCIDENTS & TIMELINE MANAGEMENT
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/incidents:
+    get:
+      summary: List Security Incidents
+      description: Returns paginated security incidents filtered by status, severity, assignee, or search term.
+      tags: [Incidents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [NEW, TRIAGED, INVESTIGATING, CONTAINMENT, ERADICATION, RECOVERY, CLOSED]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [CRITICAL, HIGH, MEDIUM, LOW]
+        - name: assignee
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Paginated incident list.
+
+    post:
+      summary: Create Manual Security Incident
+      tags: [Incidents]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  example: "Active Cobalt Strike Beacon on Domain Controller"
+                severity:
+                  type: string
+                  enum: [CRITICAL, HIGH, MEDIUM, LOW]
+                  default: MEDIUM
+                summary:
+                  type: string
+                affectedDevices:
+                  type: array
+                  items:
+                    type: string
+                indicators:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Incident created with initialized SHA-256 timeline chain.
+
+  /api/incidents/{id}:
+    get:
+      summary: Get Incident by ID
+      tags: [Incidents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Incident details with full timeline and cryptographic hash chain.
+
+  /api/incidents/{id}/status:
+    post:
+      summary: Transition Incident NIST Status
+      description: Validates and transitions incident status through the NIST SP 800-61 lifecycle state machine.
+      tags: [Incidents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [NEW, TRIAGED, INVESTIGATING, CONTAINMENT, ERADICATION, RECOVERY, CLOSED]
+                note:
+                  type: string
+                  example: "Isolating infected host from VLAN 10"
+      responses:
+        '200':
+          description: Status updated and timeline note appended with SHA-256 link.
+        '400':
+          description: Illegal backward or invalid state transition rejected.
+
+  /api/incidents/{id}/notes:
+    post:
+      summary: Append Analyst Note
+      tags: [Incidents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Note appended to timeline.
+
+  /api/incidents/{id}/timeline/verify:
+    get:
+      summary: Verify Timeline Cryptographic Integrity
+      description: Verifies every SHA-256 hash across the incident timeline to prove absence of tampering.
+      tags: [Incidents]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cryptographic integrity report.
+          content:
+            application/json:
+              example:
+                incidentId: "INC-8812"
+                valid: true
+                totalEvents: 6
+                genesisHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                latestHash: "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b"
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 6. RESPONSE ACTIONS FRAMEWORK
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/response-actions/request:
+    post:
+      summary: Propose Response Action
+      description: Creates a containment action proposal in PENDING status requiring authorized human operator approval.
+      tags: [Response Actions]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actionType]
+              properties:
+                incidentId:
+                  type: string
+                deviceId:
+                  type: string
+                actionType:
+                  type: string
+                  enum: [ISOLATE_ENDPOINT, REVOKE_DEVICE_CREDENTIAL, TERMINATE_SUSPICIOUS_PROCESS, QUARANTINE_FILE, BLOCK_IP_PERIMETER]
+                parameters:
+                  type: object
+                idempotencyKey:
+                  type: string
+      responses:
+        '201':
+          description: Action proposed in PENDING status.
+
+  /api/response-actions/{id}/approve:
+    post:
+      summary: Approve Response Action
+      description: Authorizes a PENDING response action for execution.
+      tags: [Response Actions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action marked APPROVED.
+
+  /api/response-actions/{id}/reject:
+    post:
+      summary: Reject Response Action
+      tags: [Response Actions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Action marked REJECTED.
+
+  /api/response-actions/{id}/execute:
+    post:
+      summary: Execute Approved Action
+      description: Executes an APPROVED action with idempotency protections and records the audit result.
+      tags: [Response Actions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Action executed.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 7. THREAT INTELLIGENCE & BLOCKLISTS
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/threats/dashboard:
+    get:
+      summary: Threat Intel Dashboard Aggregate
+      tags: [Threat Intelligence]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active threat feeds, real-time attacks, and threat score.
+
+  /api/threats/cves:
+    get:
+      summary: Authentic CISA KEV Vulnerabilities
+      tags: [Threat Intelligence]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active exploited CVEs list.
+
+  /api/threats/blocked:
+    get:
+      summary: List Contained IPs
+      tags: [Threat Intelligence]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Blocked IP records.
+
+  /api/threats/block-ip:
+    post:
+      summary: Block Malicious IP
+      tags: [Threat Intelligence]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ip]
+              properties:
+                ip:
+                  type: string
+                  example: "198.51.100.99"
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: IP blocked.
+
+  /api/threats/unblock-ip:
+    post:
+      summary: Revoke IP Block
+      tags: [Threat Intelligence]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ip]
+              properties:
+                ip:
+                  type: string
+      responses:
+        '200':
+          description: IP unblocked.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 8. MALWARE STATIC ANALYSIS & QUARANTINE
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/malware/analyze:
+    post:
+      summary: Static PE & Binary Analysis
+      description: Performs in-memory PE header parsing, section hashing, Shannon entropy calculation, and heuristic risk scoring without executing the binary.
+      tags: [Malware Analysis]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                  example: "suspicious_payload.exe"
+                contentBase64:
+                  type: string
+                  description: Base64-encoded binary buffer (max 10MB).
+                quarantine:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Static analysis result.
+          content:
+            application/json:
+              example:
+                peInfo:
+                  isPE: true
+                  machine: "IMAGE_FILE_MACHINE_AMD64"
+                  sectionsCount: 5
+                entropy:
+                  score: 7.92
+                  classification: "VERY_HIGH"
+                riskAssessment:
+                  severity: "CRITICAL"
+                  score: 95
+
+  /api/malware/quarantine:
+    get:
+      summary: List Quarantined Samples
+      tags: [Malware Analysis]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Quarantined samples list.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 9. AI COPILOT & ASSISTANT
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/chatbot/message:
+    post:
+      summary: Chat with AI Security Copilot
+      description: |
+        Interacts with the AI Assistant.
+        Enforces direct prompt injection defense, scrubs secrets from outputs, and scopes responses to authorized SOC advice.
+      tags: [AI Assistant]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  example: "Analyze incident INC-8812 and recommend containment steps."
+                sessionId:
+                  type: string
+      responses:
+        '200':
+          description: AI security advisory response.
+          content:
+            application/json:
+              example:
+                reply: "Based on telemetry for INC-8812, I recommend isolating host DC-PRIMARY-01 and rotating Kerberos krbtgt credentials."
+                toolsUsed: ["get_incident", "query_ioc"]
+                mode: "advisory"
+
+  /api/chatbot/proposals:
+    get:
+      summary: List AI Action Proposals
+      tags: [AI Assistant]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of pending and approved AI containment proposals.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 10. SECURITY AUDIT LOG TRAIL
+  # ──────────────────────────────────────────────────────────────────────────
+  /api/audit-logs:
+    get:
+      summary: Query Security Audit Trail
+      description: Retrieves immutable audit logs filtered by action type. Requires ADMIN or SENIOR_ANALYST role.
+      tags: [Audit Logs]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        '200':
+          description: Audit logs list.
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    MetricsTokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Secret token for scraping /metrics
+
+  schemas:
+    TelemetryEvent:
+      type: object
+      required: [event_type]
+      properties:
+        event_type:
+          type: string
+          example: "process_spawn"
+        source_ip:
+          type: string
+          example: "192.168.1.50"
+        dest_ip:
+          type: string
+          example: "10.0.0.1"
+        dest_port:
+          type: integer
+          example: 443
+        device_id:
+          type: string
+          example: "dev-91823"
+        user:
+          type: string
+          example: "administrator"
+        process:
+          type: object
+          properties:
+            name:
+              type: string
+              example: "powershell.exe"
+            command_line:
+              type: string
+              example: "powershell.exe -enc ..."
+            pid:
+              type: integer
+              example: 4812
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or malformed body.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    Unauthorized:
+      description: Authentication required or invalid token.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    Forbidden:
+      description: Insufficient RBAC permissions.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

@@ -1102,7 +1102,7 @@ export default function Dashboard() {
               </div>
               <button onClick={() => setSelectedAttack(null)} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-dim)', fontSize: 16, cursor: 'pointer', width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12, marginBottom: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 12, marginBottom: 16 }}>
               {[
                 ['Threat Classification', selectedAttack.type, 'var(--text)'],
                 ['Remote Host / IP', selectedAttack.ip, 'var(--accent-cyan)'],
@@ -1123,6 +1123,27 @@ export default function Dashboard() {
                 <strong style={{ color: selectedAttack.blocked ? '#00ff88' : '#ff3366', fontSize: 12 }}>{selectedAttack.blocked ? '✓ BLOCKED' : '● ACTIVE'}</strong>
               </div>
             </div>
+
+            {/* MITRE ATT&CK & Evidence Box */}
+            <div style={{ background: 'rgba(179, 102, 255, 0.06)', border: '1px solid rgba(179, 102, 255, 0.25)', borderRadius: 8, padding: '10px 12px', marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-purple)', fontFamily: 'Space Grotesk' }}>
+                  ◈ MITRE ATT&amp;CK TACTICAL MAPPING
+                </span>
+                <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 4, background: 'rgba(179, 102, 255, 0.2)', color: '#b366ff', fontWeight: 800 }}>
+                  {selectedAttack.mitreTactic || (selectedAttack.type?.includes('SQL') ? 'INITIAL ACCESS (T1190)' : selectedAttack.type?.includes('Brute') ? 'CREDENTIAL ACCESS (T1110)' : 'EXECUTION (T1059)')}
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text)', fontWeight: 600 }}>
+                {selectedAttack.mitreTechnique || (selectedAttack.type?.includes('SQL') ? 'Exploit Public-Facing Application' : selectedAttack.type?.includes('Brute') ? 'Brute Force: Password Guessing' : 'Command and Scripting Interpreter: PowerShell')}
+              </div>
+              {selectedAttack.evidence && (
+                <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-dim)', fontFamily: 'monospace' }}>
+                  <strong>Evidence:</strong> {typeof selectedAttack.evidence === 'object' ? JSON.stringify(selectedAttack.evidence) : selectedAttack.evidence}
+                </div>
+              )}
+            </div>
+
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn-primary" onClick={() => { blockIp(selectedAttack.ip); triggerToast(`🛡️ IP ${selectedAttack.ip} blocked`); setSelectedAttack(null); }} disabled={selectedAttack.blocked} style={{ flex: 1, padding: 12 }}>
                 {selectedAttack.blocked ? 'ALREADY MITIGATED' : '⚡ BLOCK THIS IP NOW'}

@@ -167,13 +167,16 @@ async function runSuite() {
     assert.strictEqual(inc.evidenceHash, expectedHash);
     assert.strictEqual(inc.evidence.sha256, expectedHash);
 
-    // Transition status: NEW -> INVESTIGATING -> CONTAINED
-    const updated1 = securityStore.updateIncidentStatus(inc.id, 'INVESTIGATING', 'Analyst triage started');
-    assert.strictEqual(updated1.status, 'INVESTIGATING');
-    assert.strictEqual(updated1.timeline.length, 2);
+    // Transition status: NEW -> TRIAGED -> INVESTIGATING -> CONTAINMENT
+    const updated1 = securityStore.updateIncidentStatus(inc.id, 'TRIAGED', 'Analyst initial triage');
+    assert.strictEqual(updated1.status, 'TRIAGED');
 
-    const updated2 = securityStore.updateIncidentStatus(inc.id, 'CONTAINED', 'Host isolated via SOC firewall');
-    assert.strictEqual(updated2.status, 'CONTAINED');
+    const updated2 = securityStore.updateIncidentStatus(inc.id, 'INVESTIGATING', 'In-depth forensics started');
+    assert.strictEqual(updated2.status, 'INVESTIGATING');
+    assert.strictEqual(updated2.timeline.length, 3);
+
+    const updated3 = securityStore.updateIncidentStatus(inc.id, 'CONTAINMENT', 'Host isolated via SOC firewall');
+    assert.strictEqual(updated3.status, 'CONTAINMENT');
   });
 
   // ── TEST 5: In-Memory Static PE Malware Analyzer ────────────────────────────

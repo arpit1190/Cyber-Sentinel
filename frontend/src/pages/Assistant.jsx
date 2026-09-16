@@ -338,7 +338,7 @@ I'm your **agentic SOC AI** with **18 live tools** — I can read real-time data
       const serverUrl = import.meta.env.VITE_SOCKET_URL ||
         (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== '/api'
           ? import.meta.env.VITE_API_URL.replace(/\/api$/, '')
-          : (import.meta.env.DEV ? 'http://localhost:5000' : 'https://cyber-sentinel-1cdn.onrender.com'));
+          : (import.meta.env.DEV ? 'http://localhost:5000' : (typeof window !== 'undefined' ? window.location.origin : '')));
       // Read JWT from localStorage — same key used by AuthContext
       const token = localStorage.getItem('cs_token');
       const socket = socketIO(serverUrl, {

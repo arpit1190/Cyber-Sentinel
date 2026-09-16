@@ -1,161 +1,62 @@
 /**
  * incidents.js
- * Comprehensive incident response management layer.
- * Tracks full incident lifecycle (NEW -> TRIAGED -> INVESTIGATING -> CONTAINED -> CLOSED).
- * Cryptographic SHA-256 evidence integrity preservation.
+ * Comprehensive SOC incident response management API routes.
+ * 
+ * Enforces:
+ * - Server-side NIST/SANS 8-state transition validation
+ * - RBAC permission checks
+ * - Immutable timeline auditing
+ * - Cryptographic SHA-256 evidence integrity
  */
 const express = require('express');
 const router = express.Router();
-const { requireAuth, requireRole } = require('../middleware/auth');
-const {
-  getIncidents,
-  getIncidentById,
-  createIncident,
-  updateIncidentStatus,
-  addIncidentNote,
-} = require('../data/securityStore');
-const { logSecurityEvent, AuditActions } = require('../utils/auditLogger');
+const { requireAuth, requireRole, requirePermission } = require('../middleware/auth');
+const incidentController = require('../controllers/incidentController');
 
-// GET /api/incidents - List incidents with filtering
-router.get('/', requireAuth, (req, res) => {
-  try {
-    const { status, severity, search } = req.query;
-    let incidents = getIncidents(status);
+// ── 1. List Incidents (Filter by status, severity, assignee, search query) ──
+router.get('/', requireAuth, (req, res) => incidentController.list(req, res));
 
-    if (severity && severity !== 'ALL') {
-      incidents = incidents.filter(i => i.severity.toUpperCase() === severity.toUpperCase());
-    }
+// ── 2. Get Incident by ID ──
+router.get('/:id', requireAuth, (req, res) => incidentController.getById(req, res));
 
-    if (search) {
-      const q = search.toLowerCase();
-      incidents = incidents.filter(i => 
-        i.title.toLowerCase().includes(q) ||
-        i.id.toLowerCase().includes(q) ||
-        i.relatedIps.some(ip => ip.includes(q))
-      );
-    }
+// ── 3. Create Manual Incident ──
+router.post('/', requireAuth, (req, res) => incidentController.create(req, res));
 
-    res.json({
-      success: true,
-      total: incidents.length,
-      incidents,
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// ── 4. Update Incident Fields (Metadata, devices, indicators, confidence) ──
+router.patch('/:id', requireAuth, (req, res) => incidentController.update(req, res));
+router.put('/:id', requireAuth, (req, res) => incidentController.update(req, res));
 
-// GET /api/incidents/:id - Get full incident details with evidence & timeline
-router.get('/:id', requireAuth, (req, res) => {
-  try {
-    const incident = getIncidentById(req.params.id);
-    if (!incident) {
-      return res.status(404).json({ success: false, error: 'Incident not found' });
-    }
-    res.json({ success: true, incident });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// ── 5. Change Incident Status (Validated against NIST lifecycle state machine) ──
+router.patch('/:id/status', requireAuth, (req, res) => incidentController.updateStatus(req, res));
+router.post('/:id/status', requireAuth, (req, res) => incidentController.updateStatus(req, res));
 
-// POST /api/incidents - Manual incident creation by analyst
-router.post('/', requireAuth, (req, res) => {
-  try {
-    const { title, severity, category, description, relatedIps, evidence } = req.body;
-    if (!title || !description) {
-      return res.status(400).json({ success: false, error: 'Title and description are required.' });
-    }
+// ── 6. Assign Incident to SOC Analyst ──
+router.post('/:id/assign', requireAuth, (req, res) => incidentController.assign(req, res));
+router.patch('/:id/assign', requireAuth, (req, res) => incidentController.assign(req, res));
 
-    const incident = createIncident({
-      title,
-      severity: severity || 'MEDIUM',
-      category: category || 'MANUAL_REPORT',
-      description,
-      relatedIps: relatedIps || [],
-      evidence,
-      createdBy: `${req.user.name || req.user.email} (${req.user.role})`,
-    });
+// ── 7. Close Incident with Resolution Directive ──
+router.post('/:id/close', requireAuth, (req, res) => incidentController.close(req, res));
 
-    logSecurityEvent({
-      actor: req.user.email,
-      actorRole: req.user.role,
-      action: AuditActions.INCIDENT_CREATED,
-      target: incident.id,
-      req,
-      details: { title, severity },
-    });
+// ── 8. Add Analyst Note ──
+router.post('/:id/notes', requireAuth, (req, res) => incidentController.addNote(req, res));
 
-    res.status(201).json({ success: true, incident });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// ── 9. Execute / Record Incident Response Action (Containment / Eradication) ──
+router.post('/:id/response-actions', requireAuth, (req, res) => incidentController.addResponseAction(req, res));
 
-// PATCH /api/incidents/:id/status - Transition incident lifecycle
-router.patch('/:id/status', requireAuth, requireRole(['admin', 'senior_analyst']), (req, res) => {
-  try {
-    const { status, note } = req.body;
-    if (!status) {
-      return res.status(400).json({ success: false, error: 'New status is required.' });
-    }
+// ── 10. Immutable Incident Timeline & Cryptographic Integrity ──
+// Paginated timeline retrieval
+router.get('/:id/timeline', requireAuth, (req, res) => incidentController.getTimeline(req, res));
 
-    const incident = updateIncidentStatus(
-      req.params.id,
-      status,
-      `${req.user.name || req.user.email} (${req.user.role})`,
-      note
-    );
+// Append event to timeline
+router.post('/:id/timeline', requireAuth, (req, res) => incidentController.appendTimelineEvent(req, res));
 
-    if (!incident) {
-      return res.status(404).json({ success: false, error: 'Incident not found.' });
-    }
+// Cryptographic hash chain verification
+router.get('/:id/timeline/verify', requireAuth, (req, res) => incidentController.verifyTimelineIntegrity(req, res));
 
-    logSecurityEvent({
-      actor: req.user.email,
-      actorRole: req.user.role,
-      action: AuditActions.INCIDENT_STATUS_CHANGE,
-      target: incident.id,
-      req,
-      details: { status, note },
-    });
-
-    res.json({ success: true, incident });
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// POST /api/incidents/:id/notes - Add analyst investigative note
-router.post('/:id/notes', requireAuth, (req, res) => {
-  try {
-    const { note } = req.body;
-    if (!note || !note.trim()) {
-      return res.status(400).json({ success: false, error: 'Note text cannot be empty.' });
-    }
-
-    const incident = addIncidentNote(
-      req.params.id,
-      `${req.user.name || req.user.email} (${req.user.role})`,
-      note.trim()
-    );
-
-    if (!incident) {
-      return res.status(404).json({ success: false, error: 'Incident not found.' });
-    }
-
-    logSecurityEvent({
-      actor: req.user.email,
-      actorRole: req.user.role,
-      action: AuditActions.ANALYST_NOTE_ADDED,
-      target: incident.id,
-      req,
-      details: { noteSnippet: note.slice(0, 100) },
-    });
-
-    res.json({ success: true, incident });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
+// Reject any deletion or modification of historical timeline audit records (Fail Closed / 405 Method Not Allowed)
+router.put('/:id/timeline/:eventId', requireAuth, (req, res) => incidentController.rejectTimelineMutation(req, res));
+router.patch('/:id/timeline/:eventId', requireAuth, (req, res) => incidentController.rejectTimelineMutation(req, res));
+router.delete('/:id/timeline/:eventId', requireAuth, (req, res) => incidentController.rejectTimelineMutation(req, res));
+router.delete('/:id/timeline', requireAuth, (req, res) => incidentController.rejectTimelineMutation(req, res));
 
 module.exports = router;

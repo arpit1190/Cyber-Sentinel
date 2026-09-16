@@ -1,0 +1,74 @@
+{
+  "scenario_id": "SCENARIO_06_SUSPICIOUS_FILE_ACTIVITY",
+  "title": "Rapid Suspicious File Modification & Encryption Burst",
+  "description": "Endpoint exhibits high-frequency file modifications altering file extensions to .locked, characteristic of ransomware impact behavior.",
+  "is_simulation": true,
+  "mitre_technique": "T1486",
+  "target_device": "DEV-DEMO-WORKSTATION-01",
+  "events": [
+    {
+      "event_id": "sim-file-0001",
+      "timestamp": "2026-09-16T09:25:01.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "FILE_MODIFICATION",
+      "severity": "HIGH",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "file": { "path": "C:\\Users\\victim_user\\Documents\\Q3_Financials.xlsx.locked", "name": "Q3_Financials.xlsx.locked", "action": "RENAMED", "extension": "locked" },
+      "process": { "name": "updater.vbs", "pid": 9412 }
+    },
+    {
+      "event_id": "sim-file-0002",
+      "timestamp": "2026-09-16T09:25:02.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "FILE_MODIFICATION",
+      "severity": "HIGH",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "file": { "path": "C:\\Users\\victim_user\\Documents\\Customer_Contracts.pdf.locked", "name": "Customer_Contracts.pdf.locked", "action": "RENAMED", "extension": "locked" },
+      "process": { "name": "updater.vbs", "pid": 9412 }
+    },
+    {
+      "event_id": "sim-file-0003",
+      "timestamp": "2026-09-16T09:25:03.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "FILE_MODIFICATION",
+      "severity": "CRITICAL",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "file": { "path": "C:\\Users\\victim_user\\Desktop\\Tax_Returns_2025.pdf.locked", "name": "Tax_Returns_2025.pdf.locked", "action": "RENAMED", "extension": "locked" },
+      "process": { "name": "updater.vbs", "pid": 9412 }
+    },
+    {
+      "event_id": "sim-file-0004",
+      "timestamp": "2026-09-16T09:25:04.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "FILE_MODIFICATION",
+      "severity": "CRITICAL",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "file": { "path": "C:\\Users\\victim_user\\Desktop\\SourceCode_Repository.zip.locked", "name": "SourceCode_Repository.zip.locked", "action": "RENAMED", "extension": "locked" },
+      "process": { "name": "updater.vbs", "pid": 9412 }
+    },
+    {
+      "event_id": "sim-file-0005",
+      "timestamp": "2026-09-16T09:25:05.000Z",
+      "device_id": "DEV-DEMO-WORKSTATION-01",
+      "event_type": "FILE_MODIFICATION",
+      "severity": "CRITICAL",
+      "source": "cyber-sentinel-demo-simulator",
+      "isSimulation": true,
+      "user": { "name": "victim_user", "domain": "CORP" },
+      "file": { "path": "C:\\Users\\victim_user\\Documents\\READ_ME_RECOVER_FILES.txt", "name": "READ_ME_RECOVER_FILES.txt", "action": "CREATED", "extension": "txt" },
+      "process": { "name": "updater.vbs", "pid": 9412 },
+      "details": { "ransomNote": "All your files have been encrypted with AES-256. Contact recovery@onion..." }
+    }
+  ],
+  "expected_detection_rule": "RULE_RANSOMWARE_BURST_007",
+  "expected_mitre_technique": "T1486 - Data Encrypted for Impact",
+  "recommended_response": "ISOLATE_ENDPOINT & TERMINATE_PROCESS (PID: 9412)"
+}

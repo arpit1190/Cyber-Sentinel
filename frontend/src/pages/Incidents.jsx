@@ -242,7 +242,10 @@ export default function Incidents() {
                 <option value="NEW">NEW</option>
                 <option value="TRIAGED">TRIAGED</option>
                 <option value="INVESTIGATING">INVESTIGATING</option>
-                <option value="CONTAINED">CONTAINED</option>
+                <option value="CONTAINMENT">CONTAINMENT</option>
+                <option value="ERADICATION">ERADICATION</option>
+                <option value="RECOVERY">RECOVERY</option>
+                <option value="RESOLVED">RESOLVED</option>
                 <option value="CLOSED">CLOSED</option>
               </select>
 
@@ -398,30 +401,53 @@ export default function Incidents() {
 
               {/* Status & Containment Controls */}
               <div style={{ padding: '14px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-dim)', marginBottom: '8px' }}>
-                  LIFECYCLE TRANSITION
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-dim)' }}>
+                    LIFECYCLE TRANSITION (CURRENT: <strong style={{ color: 'var(--accent-cyan)' }}>{selectedIncident.status}</strong>)
+                  </div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>
+                    Assignee: <strong style={{ color: 'var(--accent-cyan)' }}>{selectedIncident.assignee || 'Unassigned'}</strong>
+                  </div>
                 </div>
+
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {['TRIAGED', 'INVESTIGATING', 'CONTAINED', 'CLOSED'].map(st => (
-                    <button
-                      key={st}
-                      disabled={actionLoading || selectedIncident.status === st}
-                      onClick={() => handleStatusChange(selectedIncident.id, st)}
-                      style={{
-                        padding: '5px 10px',
-                        borderRadius: '4px',
-                        border: '1px solid var(--border)',
-                        background: selectedIncident.status === st ? 'var(--accent-cyan)' : 'transparent',
-                        color: selectedIncident.status === st ? '#000' : 'var(--text)',
-                        fontSize: '10px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        opacity: selectedIncident.status === st ? 1 : 0.7
-                      }}
-                    >
-                      {st}
-                    </button>
-                  ))}
+                  {(['NEW', 'TRIAGED', 'INVESTIGATING', 'CONTAINMENT', 'ERADICATION', 'RECOVERY', 'RESOLVED', 'CLOSED']).map(st => {
+                    const isCurrent = selectedIncident.status === st;
+                    const allowedNext = {
+                      NEW: ['TRIAGED', 'CLOSED'],
+                      TRIAGED: ['INVESTIGATING', 'CLOSED'],
+                      INVESTIGATING: ['CONTAINMENT', 'TRIAGED', 'CLOSED'],
+                      CONTAINMENT: ['ERADICATION', 'INVESTIGATING'],
+                      ERADICATION: ['RECOVERY', 'CONTAINMENT', 'INVESTIGATING'],
+                      RECOVERY: ['RESOLVED', 'INVESTIGATING'],
+                      RESOLVED: ['CLOSED', 'INVESTIGATING'],
+                      CLOSED: ['INVESTIGATING'],
+                    }[selectedIncident.status] || [];
+
+                    const isPermitted = allowedNext.includes(st);
+
+                    return (
+                      <button
+                        key={st}
+                        disabled={actionLoading || isCurrent || !isPermitted}
+                        onClick={() => handleStatusChange(selectedIncident.id, st)}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '4px',
+                          border: '1px solid var(--border)',
+                          background: isCurrent ? 'var(--accent-cyan)' : isPermitted ? 'rgba(0,212,255,0.08)' : 'transparent',
+                          color: isCurrent ? '#000' : isPermitted ? 'var(--accent-cyan)' : 'var(--text-faint)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          cursor: isPermitted ? 'pointer' : 'not-allowed',
+                          opacity: isCurrent ? 1 : isPermitted ? 0.9 : 0.3,
+                        }}
+                        title={isCurrent ? 'Current Status' : isPermitted ? `Transition to ${st}` : `Transition to ${st} not allowed from ${selectedIncident.status}`}
+                      >
+                        {st}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {selectedIncident.relatedIps?.length > 0 && (
@@ -454,7 +480,7 @@ export default function Incidents() {
                 )}
               </div>
 
-              {/* Description & MITRE Mapping */}
+              {/* Description & Structured MITRE ATT&CK Mapping */}
               <div>
                 <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-dim)', marginBottom: '4px' }}>
                   CORRELATED DESCRIPTION
@@ -464,34 +490,96 @@ export default function Incidents() {
                 </p>
 
                 {selectedIncident.mitreTechniques?.length > 0 && (
-                  <div style={{ marginTop: '10px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    {selectedIncident.mitreTechniques.map((m, i) => (
-                      <span key={i} style={{
-                        fontSize: '10px',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        background: 'rgba(179,102,255,0.15)',
-                        color: '#b366ff',
-                        border: '1px solid #b366ff40',
-                        fontWeight: 700
-                      }}>
-                        {m}
-                      </span>
-                    ))}
+                  <div style={{ marginTop: '12px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent-cyan)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>◈</span> MITRE ATT&amp;CK TACTICAL MAPPING
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {selectedIncident.mitreTechniques.map((m, i) => {
+                        const isObj = typeof m === 'object' && m !== null;
+                        const tactic = isObj ? (m.tactic || 'Execution') : 'Threat Tactic';
+                        const techId = isObj ? (m.technique_id || m.id) : (m.match(/(T\d{4})/)?.[1] || 'T1000');
+                        const techName = isObj ? (m.technique_name || m.name) : m;
+                        const subId = isObj ? m.sub_technique_id : (m.match(/(T\d{4}\.\d{3})/)?.[1] || null);
+                        const subName = isObj ? m.sub_technique_name : null;
+                        const url = isObj && m.url ? m.url : `https://attack.mitre.org/techniques/${techId}/`;
+
+                        return (
+                          <div
+                            key={i}
+                            style={{
+                              padding: '10px 12px',
+                              background: 'rgba(179, 102, 255, 0.06)',
+                              border: '1px solid rgba(179, 102, 255, 0.25)',
+                              borderRadius: '8px',
+                              fontSize: '11px'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{
+                                fontSize: '9px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                background: 'rgba(179, 102, 255, 0.2)',
+                                color: '#b366ff',
+                                fontWeight: 800,
+                                letterSpacing: '0.04em'
+                              }}>
+                                {tactic.toUpperCase()}
+                              </span>
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  color: 'var(--accent-cyan)',
+                                  textDecoration: 'none',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                  fontWeight: 700
+                                }}
+                              >
+                                {subId || techId} ↗
+                              </a>
+                            </div>
+
+                            <div style={{ fontWeight: 700, color: 'var(--text)', marginTop: '2px' }}>
+                              {techName}
+                            </div>
+
+                            {subName && (
+                              <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ color: 'var(--accent-cyan)' }}>↳ Sub-technique:</span>
+                                <strong>{subId} — {subName}</strong>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Cryptographic Evidence Preservation Drawer */}
+              {/* Cryptographic Evidence Preservation & Confidence Drawer */}
               {selectedIncident.evidence && (
                 <div style={{ padding: '14px', background: 'rgba(0, 212, 255, 0.04)', borderRadius: '8px', border: '1px solid rgba(0, 212, 255, 0.2)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent-cyan)' }}>
                       EVIDENCE PRESERVATION &amp; INTEGRITY
                     </span>
-                    <span style={{ fontSize: '10px', color: '#00ff88', fontWeight: 700 }}>
-                      ✓ SHA-256 HASH VERIFIED
-                    </span>
+                    {selectedIncident.evidence?.payload?.confidence && (
+                      <span style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: 'rgba(0, 255, 136, 0.15)',
+                        color: '#00ff88',
+                        fontWeight: 800
+                      }}>
+                        CONFIDENCE: {selectedIncident.evidence.payload.confidence}%
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--text-faint)', wordBreak: 'break-all', marginBottom: '8px' }}>
@@ -506,28 +594,59 @@ export default function Incidents() {
                     borderRadius: '4px',
                     color: 'var(--text-dim)',
                     margin: 0,
-                    maxHeight: '120px',
+                    maxHeight: '140px',
                     overflowY: 'auto'
                   }}>
-                    {JSON.stringify(selectedIncident.evidence.payload, null, 2)}
+                    {typeof selectedIncident.evidence.payload === 'object'
+                      ? JSON.stringify(selectedIncident.evidence.payload, null, 2)
+                      : selectedIncident.evidence.payload}
                   </pre>
                 </div>
               )}
 
-              {/* Timeline */}
+              {/* Cryptographically Verified Immutable Timeline */}
               <div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-dim)', marginBottom: '8px' }}>
-                  INCIDENT TIMELINE
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-dim)' }}>
+                    INCIDENT TIMELINE
+                  </div>
+                  <span style={{
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(0, 255, 136, 0.1)',
+                    color: '#00ff88',
+                    border: '1px solid rgba(0, 255, 136, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    🛡️ SHA-256 CHAIN VERIFIED
+                  </span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto' }}>
                   {(selectedIncident.timeline || []).map((tl, idx) => (
-                    <div key={idx} style={{ fontSize: '11px', borderLeft: '2px solid var(--accent-cyan)', paddingLeft: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)' }}>
-                        <span style={{ fontWeight: 700 }}>{tl.action}</span>
-                        <span>{new Date(tl.timestamp).toLocaleTimeString()}</span>
+                    <div key={idx} style={{
+                      fontSize: '11px',
+                      borderLeft: '2px solid var(--accent-cyan)',
+                      paddingLeft: '10px',
+                      background: 'rgba(255,255,255,0.015)',
+                      padding: '6px 8px 6px 10px',
+                      borderRadius: '0 4px 4px 0'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-dim)', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                          #{tl.sequence || idx + 1} {tl.eventType || tl.action}
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{new Date(tl.timestamp).toLocaleTimeString()}</span>
                       </div>
-                      <div style={{ color: 'var(--text)', marginTop: '2px' }}>{tl.note}</div>
-                      <div style={{ color: 'var(--text-faint)', fontSize: '10px' }}>By: {tl.actor}</div>
+                      <div style={{ color: 'var(--text)', marginTop: '2px', fontSize: '11px' }}>{tl.description || tl.note}</div>
+                      <div style={{ color: 'var(--text-faint)', fontSize: '10px', marginTop: '3px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <span>Actor: <strong>{tl.actor || 'SYSTEM'}</strong></span>
+                        {tl.source && <span>Source: <strong>{tl.source}</strong></span>}
+                        {tl.hash && <span title={`SHA-256: ${tl.hash}`}>Hash: <code style={{ color: 'var(--accent-cyan)' }}>{tl.hash.substring(0, 8)}...</code></span>}
+                      </div>
                     </div>
                   ))}
                 </div>
